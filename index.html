@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Notebook Sizes — To Scale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#F8F7F3; --panel:#FFFFFF; --ink:#1B2430;
+    --ink-soft:#5A6270; --ink-faint:#9AA0AA; --rule:#E7E4DC; --margin:#C65B58;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    padding:clamp(18px,4vw,56px);
+  }
+  .wrap{max-width:1120px;margin:0 auto;}
+
+  header{margin-bottom:clamp(24px,4vw,40px);}
+  .eyebrow{
+    font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.28em;
+    text-transform:uppercase;color:var(--ink-soft);
+    display:flex;align-items:center;gap:12px;margin-bottom:18px;
+  }
+  .eyebrow::after{content:"";flex:1;height:1px;background:var(--rule);}
+  h1{
+    font-family:"Space Grotesk",sans-serif;font-weight:600;
+    font-size:clamp(32px,7vw,58px);line-height:1.02;letter-spacing:-.02em;margin:0 0 14px;
+  }
+  h1 em{font-style:normal;color:#33417A;}
+
+  .stage{
+    background:var(--panel);border:1px solid var(--rule);border-radius:14px;
+    padding:clamp(14px,3vw,26px);margin:clamp(22px,4vw,34px) 0 14px;position:relative;
+    background-image:
+      linear-gradient(90deg, transparent 30px, rgba(198,91,88,.14) 30px, rgba(198,91,88,.14) 31px, transparent 31px),
+      repeating-linear-gradient(0deg, transparent, transparent 24px, rgba(27,36,48,.045) 24px, rgba(27,36,48,.045) 25px);
+  }
+  .diagram{width:100%;height:auto;display:block;overflow:visible;}
+  .diagram text{font-family:"IBM Plex Mono",monospace;}
+  .stage-foot{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    margin-top:6px;flex-wrap:wrap;
+  }
+  .region{
+    display:flex;align-items:center;gap:8px;
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
+  }
+  .region label{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--ink-faint);}
+  .region select{
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink);
+    background:var(--panel);border:1px solid var(--rule);border-radius:20px;
+    padding:5px 10px;cursor:pointer;
+  }
+  .region select:hover{border-color:var(--ink-soft);}
+  .region-auto{font-size:10px;color:var(--ink-faint);}
+  .filters{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .fbtn{
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
+    background:none;border:1px solid var(--rule);border-radius:20px;padding:5px 12px;cursor:pointer;
+    transition:background .12s,color .12s,border-color .12s;
+  }
+  .fbtn:hover{border-color:var(--ink-soft);color:var(--ink);}
+  .fbtn.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+
+  .section-label{
+    font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--ink-soft);margin:26px 0 14px;
+    display:flex;align-items:center;gap:12px;
+  }
+  .section-label::after{content:"";flex:1;height:1px;background:var(--rule);}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+  .card{
+    background:var(--panel);border:1px solid var(--rule);border-radius:12px;
+    padding:16px 18px;border-left:4px solid var(--c);transition:opacity .18s ease;
+  }
+  .card.off{opacity:.5;}
+  .card.off .card-head .name{text-decoration:line-through;text-decoration-color:var(--ink-faint);}
+  .card-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .toggle{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none;}
+  .toggle input{position:absolute;opacity:0;width:0;height:0;}
+  .box{
+    width:18px;height:18px;border-radius:5px;border:2px solid var(--c);
+    display:grid;place-items:center;flex:none;background:transparent;transition:background .12s;
+  }
+  .box svg{width:11px;height:11px;opacity:0;}
+  .toggle input:checked + .box{background:var(--c);}
+  .toggle input:checked + .box svg{opacity:1;}
+  .toggle input:focus-visible + .box{outline:2px solid var(--ink);outline-offset:2px;}
+  .card h3{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:20px;margin:0;letter-spacing:-.01em;line-height:1.1;}
+  .tag{
+    font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--c);border:1px solid var(--c);border-radius:20px;padding:2px 8px;display:inline-block;margin:0 0 0 auto;opacity:.9;white-space:nowrap;
+  }
+  .measure{font-family:"IBM Plex Mono",monospace;font-size:13.5px;line-height:1.65;margin:12px 0 6px;}
+  .measure .dim-primary{font-weight:600;} .measure .dim-mm{color:var(--ink-faint);font-size:12px;}
+  .measure .alt{display:block;color:var(--ink-faint);font-size:11.5px;margin-top:1px;}
+  .use{font-size:13px;color:var(--ink-soft);margin:0 0 12px;line-height:1.45;}
+
+  details{border-top:1px solid var(--rule);padding-top:10px;}
+  summary{
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.04em;
+    color:var(--ink);cursor:pointer;list-style:none;display:flex;align-items:center;gap:7px;
+  }
+  summary::-webkit-details-marker{display:none;}
+  summary .chev{transition:transform .18s;color:var(--c);}
+  details[open] summary .chev{transform:rotate(90deg);}
+  summary .count{color:var(--ink-faint);margin-left:auto;}
+
+  .prod{border:1px solid var(--rule);border-radius:9px;padding:11px 12px;margin-top:10px;background:#FCFBF8;}
+  .prod .p-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline;}
+  .prod .p-brand{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:14px;}
+  .prod .p-size{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--c);white-space:nowrap;}
+  .prod .p-model{font-size:12px;color:var(--ink-soft);margin:1px 0 8px;}
+  .specs{display:flex;flex-wrap:wrap;gap:5px 6px;margin-bottom:9px;}
+  .chip{
+    font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink);
+    background:#F1EEE6;border-radius:5px;padding:2px 7px;white-space:nowrap;
+  }
+  .chip b{color:var(--ink-soft);font-weight:500;}
+  .live{
+    display:flex;align-items:center;gap:8px;font-family:"IBM Plex Mono",monospace;font-size:11px;
+    color:var(--ink-soft);flex-wrap:wrap;
+  }
+  .live a{
+    color:var(--c);text-decoration:none;border:1px solid var(--c);border-radius:6px;
+    padding:4px 9px;display:inline-flex;align-items:center;gap:5px;font-weight:500;
+  }
+  .live a:hover{background:var(--c);color:#fff;}
+  .live a:hover svg path{stroke:#fff;}
+  .live a.camel{border-style:dashed;}
+  .none{font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin-top:10px;}
+  .none b{color:var(--ink);font-weight:600;}
+
+  .notes{margin-top:34px;padding-top:22px;border-top:1px solid var(--rule);
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px;}
+  .note h4{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;margin:0 0 8px;}
+  .note p{margin:0;font-size:12.5px;color:var(--ink-soft);line-height:1.5;}
+  .note a{color:#33417A;}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Stationery&nbsp;·&nbsp;Size Reference</div>
+    <h1>Notebook sizes,<br><em>drawn to scale.</em></h1>
+  </header>
+
+  <div class="stage">
+    <svg id="diagram" class="diagram" role="img" aria-label="Notebook sizes overlaid to scale with labelled callouts."></svg>
+  </div>
+  <div class="stage-foot">
+    <div class="filters" id="filters">
+      <button class="fbtn active" data-group="all" type="button">All</button>
+      <button class="fbtn" data-group="a4" type="button">A4</button>
+      <button class="fbtn" data-group="a5" type="button">A5</button>
+      <button class="fbtn" data-group="b5" type="button">B5</button>
+      <button class="fbtn" data-group="b6" type="button">B6</button>
+      <button class="fbtn" data-group="ftr" type="button">Field/Traveller/Reporter</button>
+      <button class="fbtn" data-group="a6" type="button">A6</button>
+    </div>
+    <div class="region">
+      <label for="regionSel">Region</label>
+      <select id="regionSel" aria-label="Marketplace region for shopping links"></select>
+      <span class="region-auto" id="regionAuto"></span>
+    </div>
+  </div>
+
+  <div class="section-label">Sizes &amp; variants</div>
+  <div class="cards" id="cards"></div>
+
+  <div class="notes">
+    <div class="note">
+      <h4>JIS vs ISO B-sizes</h4>
+      <p>The B-series exists in two standards. Japanese makers (Kokuyo, Midori, Apica) use <strong>JIS</strong> — a touch taller and narrower. European makers (Leuchtturm1917, Rhodia) use <strong>ISO</strong>. A-sizes (A4, A5, A6) are identical worldwide, so they get a single entry each.</p>
+    </div>
+    <div class="note">
+      <h4>On "Slim" sizes</h4>
+      <p>Slim is not a formal standard — it's a maker's narrower cut. B6 Slim is well-established but differs by brand (Midori ≈110×176, Stalogy 100×180). B5 Slim is rare and its width drifts, so treat that figure as approximate.</p>
+    </div>
+    <div class="note">
+      <h4>Shopping links</h4>
+      <p>Specs (brand, size, gsm, pages) are verified. Links use your detected region (change it above): <strong>Amazon</strong> for the live listing, price and star rating, and <strong>Camel</strong> for price history where that marketplace is supported (Camel covers the US, UK, Canada, Germany, France, Italy, Spain, Japan and Australia; the Camel link is hidden elsewhere).</p>
+    </div>
+    <div class="note">
+      <h4>Brand sizes ≠ pure ISO</h4>
+      <p>Several products use a house size close to — but not exactly — the standard: Leuchtturm's Pocket runs 90×150 (under A6), its B6+ is 125×190 (taller than B6), its Composition is 178×254 (between ISO and JIS B5). Real dimensions are shown per product.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ---------- MARKETPLACE / REGION ----------
+   @typedef {{code:string,label:string,flag:string,amazon:string,camel:(string|null)}} Market
+   Camel supports a subset of Amazon marketplaces; `camel` is the subdomain prefix
+   ("au." → au.camelcamelcamel.com, "" → camelcamelcamel.com) or null if unsupported. */
+const MARKETS = {
+  AU:{code:"AU",label:"Australia",     flag:"🇦🇺",amazon:"www.amazon.com.au",camel:"au."},
+  US:{code:"US",label:"United States", flag:"🇺🇸",amazon:"www.amazon.com",   camel:""},
+  GB:{code:"GB",label:"United Kingdom",flag:"🇬🇧",amazon:"www.amazon.co.uk", camel:"uk."},
+  CA:{code:"CA",label:"Canada",        flag:"🇨🇦",amazon:"www.amazon.ca",    camel:"ca."},
+  DE:{code:"DE",label:"Germany",       flag:"🇩🇪",amazon:"www.amazon.de",    camel:"de."},
+  FR:{code:"FR",label:"France",        flag:"🇫🇷",amazon:"www.amazon.fr",    camel:"fr."},
+  IT:{code:"IT",label:"Italy",         flag:"🇮🇹",amazon:"www.amazon.it",    camel:"it."},
+  ES:{code:"ES",label:"Spain",         flag:"🇪🇸",amazon:"www.amazon.es",    camel:"es."},
+  JP:{code:"JP",label:"Japan",         flag:"🇯🇵",amazon:"www.amazon.co.jp", camel:"jp."},
+  NL:{code:"NL",label:"Netherlands",   flag:"🇳🇱",amazon:"www.amazon.nl",    camel:null},
+  SE:{code:"SE",label:"Sweden",        flag:"🇸🇪",amazon:"www.amazon.se",    camel:null},
+  IN:{code:"IN",label:"India",         flag:"🇮🇳",amazon:"www.amazon.in",    camel:null},
+  MX:{code:"MX",label:"Mexico",        flag:"🇲🇽",amazon:"www.amazon.com.mx",camel:null},
+  BR:{code:"BR",label:"Brazil",        flag:"🇧🇷",amazon:"www.amazon.com.br",camel:null},
+  SG:{code:"SG",label:"Singapore",     flag:"🇸🇬",amazon:"www.amazon.sg",    camel:null},
+  AE:{code:"AE",label:"UAE",           flag:"🇦🇪",amazon:"www.amazon.ae",    camel:null},
+  XX:{code:"XX",label:"Other (.com)",  flag:"🌐",amazon:"www.amazon.com",    camel:null}
+};
+/** @type {Market} */
+let MARKET = MARKETS.XX;
+let autoDetected = false;
+
+const amazonURL = s => `https://${MARKET.amazon}/s?k=${encodeURIComponent(s)}`;
+const camelURL  = s => MARKET.camel === null ? null
+  : `https://${MARKET.camel}camelcamelcamel.com/search?sq=${encodeURIComponent(s)}`;
+
+/* ---------- UNITS ----------
+   Paper is quoted in inches in the US/Canada (Letter/Legal countries) and in
+   centimetres almost everywhere else. The active unit follows the region. */
+const IMPERIAL = new Set(["US","CA"]);
+let UNIT = "cm";                                   // "cm" | "in"
+const unitForMarket = m => IMPERIAL.has(m.code) ? "in" : "cm";
+function fmtDim(w, h, unit, approx){
+  const p = approx ? "≈" : "";
+  return unit === "in"
+    ? `${p}${(w/25.4).toFixed(2)} × ${(h/25.4).toFixed(2)} in`
+    : `${p}${(w/10).toFixed(1)} × ${(h/10).toFixed(1)} cm`;
+}
+// Rewrite the primary dimension text on every card to the current unit.
+function updateUnits(){
+  document.querySelectorAll(".dim-primary").forEach(el=>{
+    el.textContent = fmtDim(+el.dataset.w, +el.dataset.h, UNIT, el.dataset.approx === "1");
+  });
+}
+
+// Best-effort country code from the browser locale — synchronous, no network, no prompt.
+function countryFromLocale(){
+  const langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
+  for(const l of langs){ const m = /-([A-Z]{2})\b/.exec(l || ""); if(m) return m[1]; }
+  return null;
+}
+// Non-intrusive IP geolocation (no permission prompt). Falls back to locale, then "Other".
+async function detectCountry(){
+  try{
+    const ctrl = new AbortController();
+    const t = setTimeout(()=>ctrl.abort(), 3500);
+    const r = await fetch("https://ipwho.is/", {signal:ctrl.signal, cache:"no-store"});
+    clearTimeout(t);
+    const j = await r.json();
+    if(j && j.success !== false && j.country_code) return j.country_code;
+  }catch(e){/* offline / blocked → fall through */}
+  return countryFromLocale();
+}
+
+/* ---------- DATA ---------- */
+
+const sizes = [
+  {
+    id:"a4", name:"A4", tag:"ISO · A-series", color:"#6B4FA6",
+    w:210, h:297, mm:"210 × 297 mm", in:"8.27 × 11.69 in", alt:"office standard — identical worldwide",
+    use:"Full-page desk work — reports, drafting, art, spreads that photocopy 1:1.",
+    products:[
+      {brand:"Leuchtturm1917", model:"Master (A4+) Hardcover, Dotted",
+       size:"A4+ · 225×315", specs:[["paper","100 gsm"],["pages","235"],["cover","Hardcover"],["dots","5 mm"]],
+       note:"Leuchtturm's Master is A4+ — larger than true A4 (210×297). True-A4 hardcover dot-grid is rare.",
+       search:"Leuchtturm1917 Master A4 hardcover dotted"},
+      {brand:"Leuchtturm1917", model:"Master Slim (A4+) Hardcover, Dotted",
+       size:"A4+ · 225×315", specs:[["paper","100 gsm"],["pages","123"],["cover","Hardcover"],["dots","5 mm"]],
+       search:"Leuchtturm1917 Master Slim A4 hardcover dotted"}
+    ]
+  },
+  {
+    id:"a6", name:"A6", tag:"ISO · A-series", color:"#C43D3D",
+    w:105, h:148, mm:"105 × 148 mm", in:"4.13 × 5.83 in", alt:"half of A5 — identical worldwide",
+    use:"Pocket capture. Grocery lists, quick notes, one-handed jotting.",
+    products:[
+      {brand:"Leuchtturm1917", model:"Pocket (A6) Hardcover, Dotted",
+       size:"LT “A6” · 90×150", specs:[["paper","80 gsm"],["pages","187"],["cover","Hardcover"],["dots","5 mm"]],
+       search:"Leuchtturm1917 Pocket A6 hardcover dotted"},
+      {brand:"Dingbats+", model:"Wildlife A6 Hardcover, Dotted",
+       size:"A6 · ~100×150", specs:[["paper","100 gsm"],["pages","~192"],["cover","Hardcover"],["dots","5 mm"]],
+       search:"Dingbats Wildlife A6 hardcover dotted notebook"}
+    ]
+  },
+  {
+    id:"a5", name:"A5", tag:"ISO · A-series", color:"#2F6BB0",
+    w:148, h:210, mm:"148 × 210 mm", in:"5.83 × 8.27 in", alt:"the all-rounder — identical worldwide",
+    use:"Journals, planners, bullet journals. The most popular size globally.",
+    products:[
+      {brand:"Leuchtturm1917", model:"Medium (A5) Hardcover, Dotted",
+       size:"A5 · 145×210", specs:[["paper","80 gsm"],["pages","251"],["cover","Hardcover"],["dots","5 mm"]],
+       search:"Leuchtturm1917 Medium A5 hardcover dotted"},
+      {brand:"Rhodia", model:"Goalbook A5 Hardcover, Dot",
+       size:"A5 · 148×210", specs:[["paper","90 gsm"],["pages","224"],["cover","Hardcover"],["dots","5 mm"]],
+       search:"Rhodia Goalbook A5 dot hardcover"},
+      {brand:"Leuchtturm1917", model:"120G Special Edition A5, Dotted",
+       size:"A5 · 145×210", specs:[["paper","120 gsm"],["pages","203"],["cover","Hardcover"],["dots","5 mm"]],
+       search:"Leuchtturm1917 120g special edition A5 dotted hardcover"}
+    ]
+  },
+  {
+    id:"b6iso", name:"B6", tag:"ISO", color:"#E08A1E",
+    w:125, h:176, mm:"125 × 176 mm", in:"4.92 × 6.93 in", alt:"European B6 (Rhodia, Leuchtturm)",
+    use:"Everyday carry with real writing room; slips into most bags.",
+    products:[
+      {brand:"Leuchtturm1917", model:"Paperback (B6+) Hardcover, Dotted",
+       size:"B6+ · 125×190", specs:[["paper","80 gsm"],["pages","219"],["cover","Hardcover"],["dots","5 mm"]],
+       note:"The mainstream hardcover dot-grid nearest to B6 — but taller (the “+”).",
+       search:"Leuchtturm1917 Paperback B6+ hardcover dotted"}
+    ]
+  },
+  {
+    id:"b6jis", name:"B6", tag:"JIS", color:"#8A3B6B",
+    w:128, h:182, mm:"128 × 182 mm", in:"5.04 × 7.17 in", alt:"Japanese B6 (Kokuyo, Apica)",
+    use:"The Japanese standard B6 — slightly taller and wider than ISO.",
+    products:[
+      {brand:"Leuchtturm1917", model:"Paperback (B6+) Hardcover, Dotted",
+       size:"B6+ · 125×190", specs:[["paper","80 gsm"],["pages","219"],["cover","Hardcover"],["dots","5 mm"]],
+       note:"No mainstream JIS-B6 hardcover dot-grid; the ISO-based B6+ is the closest pick.",
+       search:"Leuchtturm1917 Paperback B6+ hardcover dotted"}
+    ]
+  },
+  {
+    id:"b6slim_midori", name:"B6 Slim", tag:"Midori · non-standard", color:"#3F8F4F",
+    w:110, h:176, mm:"110 × 176 mm", in:"4.33 × 6.93 in", alt:"Midori / Nanami / Galen cut",
+    use:"Tall and pocketable — the fountain-pen journaller's favourite.",
+    none:"B6 Slim is a softcover, staple-bound niche — no hardcover here, and rulings are grid / lined / blank rather than dotted. Midori's cream MD paper is the pick fountain-pen users reach for.",
+    products:[
+      {brand:"Midori", model:"MD Notebook B6 Slim — Grid",
+       size:"B6 Slim · ~105×175", specs:[["paper","80 gsm"],["cover","Softcover"],["ruling","5 mm grid"],["binding","Thread"]],
+       search:"Midori MD notebook B6 slim grid"},
+      {brand:"Midori", model:"MD Notebook Light B6 Slim (3-pack) — Grid",
+       size:"B6 Slim · ~105×175", specs:[["paper","80 gsm"],["cover","Softcover"],["ruling","5 mm grid"],["pack","×3"]],
+       search:"Midori MD notebook light B6 slim grid 3 pack"}
+    ]
+  },
+  {
+    id:"b6slim_stalogy", name:"B6 Slim", tag:"Stalogy · non-standard", color:"#7A6A2E",
+    w:100, h:180, mm:"100 × 180 mm", in:"3.94 × 7.09 in", alt:"Stalogy 018 cut",
+    use:"Stalogy's narrower, taller take on B6 Slim.",
+    none:"Softcover with a fine 5 mm <b>grid</b> on thin 52 gsm paper (same weight as Hobonichi's Tomoe River-style stock) — dated day/grid pages you can ignore or use.",
+    products:[
+      {brand:"Stalogy", model:"018 Editor's Series ½-Year B6 Slim — Grid",
+       size:"B6 Slim · 100×180", specs:[["paper","52 gsm"],["pages","~192"],["cover","Softcover"],["ruling","5 mm grid"]],
+       search:"Stalogy 018 half year B6 slim"},
+      {brand:"Stalogy", model:"018 Editor's Series 1-Year B6 Slim — Grid",
+       size:"B6 Slim · 100×180", specs:[["paper","52 gsm"],["pages","~368"],["cover","Softcover"],["ruling","5 mm grid"]],
+       search:"Stalogy 018 365days B6 slim"}
+    ]
+  },
+  {
+    id:"b5iso", name:"B5", tag:"ISO", color:"#1C8A80",
+    w:176, h:250, mm:"176 × 250 mm", in:"6.93 × 9.84 in", alt:"European B5 (composition size)",
+    use:"Desk & study. Roomy for notes and sketching without going full A4.",
+    products:[
+      {brand:"Leuchtturm1917", model:"Composition (B5) Hardcover, Dotted",
+       size:"B5 · 178×254", specs:[["paper","80 gsm"],["pages","219"],["cover","Hardcover"],["dots","5 mm"]],
+       note:"Leuchtturm's B5 sits between ISO (176×250) and JIS (182×257).",
+       search:"Leuchtturm1917 Composition B5 hardcover dotted"}
+    ]
+  },
+  {
+    id:"b5jis", name:"B5", tag:"JIS", color:"#33417A",
+    w:182, h:257, mm:"182 × 257 mm", in:"7.17 × 10.12 in", alt:"Japanese B5 — the classic school size",
+    use:"The Japanese standard B5, the most-produced notebook size in Japan.",
+    products:[
+      {brand:"Leuchtturm1917", model:"Composition (B5) Hardcover, Dotted",
+       size:"B5 · 178×254", specs:[["paper","80 gsm"],["pages","219"],["cover","Hardcover"],["dots","5 mm"]],
+       note:"Slightly under true JIS B5, but the closest mainstream hardcover dot-grid.",
+       search:"Leuchtturm1917 Composition B5 hardcover dotted"}
+    ]
+  },
+  {
+    id:"b5slim", name:"B5 Slim", tag:"approx · non-standard", color:"#B5527A", approx:true,
+    w:150, h:250, mm:"≈150 × 250 mm", in:"≈5.91 × 9.84 in", alt:"rare; width varies by maker",
+    use:"A narrowed B5 for one-handed note-taking. Uncommon — verify before buying refills.",
+    none:"Even with softcover and grid allowed, B5 Slim barely exists as a product. Japanese “<b>Semi-B5</b>” school notebooks (≈179×252, e.g. Kokuyo Campus) are the closest everyday option — full-width, not slim; the Leuchtturm Composition (B5) above is the closest dot-grid.",
+    products:[
+      {brand:"Kokuyo", model:"Campus Semi-B5 — Grid (closest substitute)",
+       size:"Semi-B5 · 179×252", specs:[["paper","~70 gsm"],["cover","Softcover"],["ruling","5 mm grid"]],
+       search:"Kokuyo Campus B5 grid notebook"}
+    ]
+  },
+  {
+    id:"fieldnotes", name:"Field Notes", tag:"memo · US format", color:"#9C5A2C",
+    w:89, h:140, mm:"89 × 140 mm", in:"3.5 × 5.5 in", alt:"US memo book / “pocket” size",
+    use:"Back-pocket carry — the classic 48-page memo book. Smaller than A6.",
+    none:"A brand-defined format, not an ISO/JIS standard: softcover, staple-bound, 48 pages. Standard 3-packs are graph or ruled; dot-grid shows up in some quarterly editions.",
+    products:[
+      {brand:"Field Notes", model:"Original Kraft 3-Pack — Graph",
+       size:"Memo · 89×140", specs:[["paper","~70 gsm"],["pages","48 ea."],["cover","Softcover"],["ruling","Graph"]],
+       note:"Body paper weight varies by edition; dot-grid is edition-dependent, so check the current release.",
+       search:"Field Notes memo book graph 3 pack"}
+    ]
+  },
+  {
+    id:"tn_regular", name:"Traveler's", tag:"Regular · non-standard", color:"#1591A8",
+    w:110, h:220, mm:"110 × 220 mm", in:"4.33 × 8.66 in", alt:"Midori TN — tall leather-cover format",
+    use:"Tall, slim carry for travel journaling; swap refills in a leather cover.",
+    none:"A cover-based system, not a paper standard: a leather cover holds thin stitched refills you swap out. Grid and dot refills exist alongside blank / lined.",
+    products:[
+      {brand:"Traveler's Company", model:"Regular Starter Kit (cover + blank refill)",
+       size:"Regular · 110×220", specs:[["paper","MD thin"],["cover","Leather + insert"],["ruling","Blank"]],
+       search:"Travelers Company notebook regular starter kit"},
+      {brand:"Traveler's Company", model:"Regular Refill 002 — Grid",
+       size:"Regular · 110×220", specs:[["paper","MD thin"],["pages","64"],["cover","Insert"],["ruling","5 mm grid"]],
+       search:"Travelers Company regular refill 002 grid"}
+    ]
+  },
+  {
+    id:"tn_passport", name:"Traveler's", tag:"Passport · non-standard", color:"#C89B2C",
+    w:90, h:125, mm:"90 × 125 mm", in:"3.54 × 4.92 in", alt:"Midori TN — passport-sized cover format",
+    use:"Passport-sized carry — tickets, stamps and short notes on trips.",
+    none:"The smaller Traveler's format — same leather-cover-plus-refill system as the Regular, near passport dimensions (close to B7).",
+    products:[
+      {brand:"Traveler's Company", model:"Passport Starter Kit (cover + blank refill)",
+       size:"Passport · 90×125", specs:[["paper","MD thin"],["cover","Leather + insert"],["ruling","Blank"]],
+       search:"Travelers Company notebook passport starter kit"},
+      {brand:"Traveler's Company", model:"Passport Refill 002 — Grid",
+       size:"Passport · 90×125", specs:[["paper","MD thin"],["cover","Insert"],["ruling","5 mm grid"]],
+       search:"Travelers Company passport refill grid"}
+    ]
+  },
+  {
+    id:"reporters", name:"Reporter's", tag:"varies · top-bound", color:"#566270", approx:true,
+    w:102, h:203, mm:"≈102 × 203 mm", in:"≈4 × 8 in", alt:"flip-top press pad; size varies by maker",
+    use:"Flip-top narrow pad for standing note-taking — journalism, site visits.",
+    none:"“Reporter's” is a binding style, not a fixed size — dimensions vary a lot (≈100–130 wide × 195–230 tall). The box shows a common ≈4×8 in pad; the products below list their own real sizes.",
+    products:[
+      {brand:"Field Notes", model:"Front Page Reporter's Notebook — Graph",
+       size:"Reporter · ~121×197", specs:[["paper","~70 gsm"],["cover","Softcover"],["bind","Top"],["ruling","Graph"]],
+       search:"Field Notes Front Page reporters notebook"},
+      {brand:"Moleskine", model:"Reporter Notebook — Large, Ruled",
+       size:"Reporter · 130×210", specs:[["paper","~70 gsm"],["cover","Hard/soft"],["bind","Top"],["ruling","Ruled"]],
+       search:"Moleskine Reporter notebook large"}
+    ]
+  }
+];
+
+/* ---------- DIAGRAM ---------- */
+const svg = document.getElementById("diagram");
+const hidden = new Set();
+const CARD_W = 85.6, CARD_H = 54;   // standard credit card, to scale (ISO/IEC 7810 ID-1)
+
+function esc(t){return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+const shortTag = t => t.split("·")[0].trim();
+
+// Rebuilds the whole diagram from the currently-visible sizes. The viewBox is
+// recomputed each time from the visible bounding box, so the boxes + labels grow
+// to fill the container when larger sizes are hidden, and labels hug the widest box.
+function renderDiagram(){
+  const visible = sizes.filter(s=>!hidden.has(s.id));
+  if(visible.length === 0){
+    svg.setAttribute("viewBox","0 0 200 60");
+    svg.innerHTML = `<text x="100" y="34" text-anchor="middle" font-size="10" fill="#9AA0AA">Tick a size to show it here</text>`;
+    return;
+  }
+
+  const B    = Math.max(...visible.map(s=>s.h));   // baseline (bottom edge) = tallest visible
+  const Wmax = Math.max(...visible.map(s=>s.w));   // widest visible box
+
+  // boxes, largest behind so smaller ones read on top
+  const rects = [...visible].sort((a,b)=>(b.w*b.h)-(a.w*a.h)).map(s=>{
+    const y = B - s.h;
+    return `<rect x="0" y="${y}" width="${s.w}" height="${s.h}" fill="${s.color}" fill-opacity="0.13" stroke="${s.color}" stroke-width="1"/>`;
+  }).join("");
+
+  // credit-card scale reference, bottom-left — filled so it reads over the washes
+  const card = `<rect x="0" y="${B-CARD_H}" width="${CARD_W}" height="${CARD_H}" rx="2.5" fill="#3B424E" fill-opacity="0.94" stroke="#20252E" stroke-width="0.7"/>
+    <text x="${CARD_W/2}" y="${B-CARD_H/2+1.9}" text-anchor="middle" font-size="4.9" fill="#FFFFFF" font-weight="600" letter-spacing="0.3">CREDIT CARD · 85.6×54</text>`;
+
+  // labels in a gutter that hugs the widest visible box; stacked top-to-bottom, no overlap
+  const FS = 7, GAPY = FS*1.9;
+  const gutterX = Wmax + 9;
+  const labelX  = gutterX + 3;
+  let lastY = -1e9, maxChars = 0;
+  const leaders = [...visible].sort((a,b)=>(B-a.h)-(B-b.h)).map(s=>{
+    const topY = B - s.h;
+    const ly = Math.max(topY + FS*0.4, lastY + GAPY);
+    lastY = ly;
+    const name = `${s.name} · ${shortTag(s.tag)}`;
+    const dims = fmtDim(s.w, s.h, UNIT, s.approx);
+    maxChars = Math.max(maxChars, name.length + dims.length + 2);
+    return `
+      <line x1="${s.w}" y1="${topY}" x2="${gutterX}" y2="${ly}" stroke="${s.color}" stroke-width="0.5" stroke-opacity="0.7"/>
+      <circle cx="${s.w}" cy="${topY}" r="1.2" fill="${s.color}"/>
+      <text x="${labelX}" y="${ly + FS*0.34}" font-size="${FS}"><tspan fill="${s.color}" font-weight="600">${esc(name)}</tspan><tspan fill="#5A6270">   ${esc(dims)}</tspan></text>`;
+  });
+  const lowestLabel = lastY;
+
+  // viewBox from the visible bounds (+ estimated label width so text isn't clipped)
+  const labelW = maxChars * FS * 0.56;         // monospace ≈ 0.56em advance
+  const minX = -4, minY = -6;
+  const maxX = labelX + labelW + 4;
+  const maxY = Math.max(B, lowestLabel + FS) + 6;
+  svg.setAttribute("viewBox", `${minX} ${minY} ${(maxX-minX).toFixed(1)} ${(maxY-minY).toFixed(1)}`);
+  svg.innerHTML = rects + card + leaders.join("");
+}
+
+/* ---------- CARDS ---------- */
+const check = `<svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.3 2.3 4.7-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const chev  = `<svg class="chev" width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M2.5 1l4 3.5-4 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const ext   = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M4 2h6v6M10 2L4.5 7.5M8 8v2H2V4h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+function prodHTML(p){
+  const chips = p.specs.map(([k,v])=>`<span class="chip"><b>${esc(k)}</b> ${esc(v)}</span>`).join("");
+  const camel = camelURL(p.search);
+  return `<div class="prod">
+    <div class="p-top"><span class="p-brand">${esc(p.brand)}</span><span class="p-size">${esc(p.size)}</span></div>
+    <div class="p-model">${esc(p.model)}</div>
+    <div class="specs">${chips}</div>
+    ${p.note?`<div class="none" style="margin:0 0 9px">${p.note}</div>`:""}
+    <div class="live">
+      <a class="camel" data-search="${esc(p.search)}" href="${camel||"#"}" target="_blank" rel="noopener"${camel?"":' style="display:none"'}>Price history · Camel ${ext}</a>
+      <a class="amazon" data-search="${esc(p.search)}" href="${amazonURL(p.search)}" target="_blank" rel="noopener">★ &amp; buy · Amazon ${ext}</a>
+    </div>
+  </div>`;
+}
+
+function cardHTML(s){
+  const prods = (s.products && s.products.length) ? s.products.map(prodHTML).join("") : "";
+  const noneBlock = s.none ? `<div class="none">${s.none}</div>` : "";
+  const cnt = s.products ? s.products.length : 0;
+  const countLabel = cnt ? cnt + " option" + (cnt>1?"s":"") : "see note";
+  return `<div class="card" id="card-${s.id}" style="--c:${s.color}">
+    <div class="card-head">
+      <label class="toggle" title="Show / hide in diagram">
+        <input type="checkbox" checked data-id="${s.id}">
+        <span class="box">${check}</span>
+      </label>
+      <h3 class="name">${esc(s.name)}</h3>
+      <span class="tag">${esc(s.tag)}</span>
+    </div>
+    <p class="measure"><span class="dim-primary" data-w="${s.w}" data-h="${s.h}" data-approx="${s.approx?1:0}">${fmtDim(s.w,s.h,UNIT,s.approx)}</span> &nbsp;<span class="dim-mm">${esc(s.mm)}</span>
+      <span class="alt">${esc(s.alt)}</span></p>
+    <p class="use">${esc(s.use)}</p>
+    <details>
+      <summary>${chev} Dot / grid picks · price via Camel <span class="count">${countLabel}</span></summary>
+      ${noneBlock}${prods}
+    </details>
+  </div>`;
+}
+
+const cardsEl = document.getElementById("cards");
+// Cards follow the same top-to-bottom order as the diagram's callouts (tallest first).
+const cardOrder = [...sizes].sort((a,b)=> b.h - a.h);
+cardsEl.innerHTML = cardOrder.map(cardHTML).join("");
+
+const filtersEl = document.getElementById("filters");
+
+/* ---------- FILTER GROUPS ----------
+   Two modes:
+   • All mode  — every item visible → "All" is active, group buttons off.
+   • Partial   — at least one item hidden → "All" off, and a group button is
+                 active only when every item in that category is visible.
+   Button state is always DERIVED from what's visible (see refreshFilters). */
+const GROUPS = {
+  a4:  ["a4"],
+  a5:  ["a5"],
+  b5:  ["b5jis","b5iso","b5slim"],
+  b6:  ["b6jis","b6iso","b6slim_midori","b6slim_stalogy"],
+  ftr: ["fieldnotes","tn_regular","tn_passport","reporters"],
+  a6:  ["a6"]
+};
+
+function syncChecks(){
+  cardsEl.querySelectorAll("input[type=checkbox]").forEach(cb=>{
+    const on = !hidden.has(cb.dataset.id);
+    cb.checked = on;
+    document.getElementById("card-"+cb.dataset.id).classList.toggle("off", !on);
+  });
+}
+function refreshFilters(){
+  const allVisible = hidden.size === 0;
+  filtersEl.querySelectorAll(".fbtn").forEach(btn=>{
+    const g = btn.dataset.group;
+    const active = g === "all"
+      ? allVisible                                          // All ⇔ nothing hidden
+      : !allVisible && GROUPS[g].every(id=>!hidden.has(id)); // group ⇔ fully visible (and not All mode)
+    btn.classList.toggle("active", active);
+  });
+}
+
+cardsEl.querySelectorAll("input[type=checkbox]").forEach(cb=>{
+  cb.addEventListener("change", e=>{
+    const id = e.target.dataset.id;
+    const card = document.getElementById("card-"+id);
+    if(e.target.checked){ hidden.delete(id); card.classList.remove("off"); }
+    else { hidden.add(id); card.classList.add("off"); }
+    refreshFilters();
+    renderDiagram();
+  });
+});
+
+filtersEl.addEventListener("click", e=>{
+  const btn = e.target.closest(".fbtn"); if(!btn) return;
+  const g = btn.dataset.group;
+  if(g === "all"){
+    hidden.clear();                                   // "All" can only ever turn ON
+  } else if(hidden.size === 0){
+    // All mode → focus down to just this group; further clicks are additive
+    const keep = new Set(GROUPS[g]);
+    sizes.forEach(s=>{ if(!keep.has(s.id)) hidden.add(s.id); });
+  } else {
+    const ids = GROUPS[g];
+    const whole = ids.every(id=>!hidden.has(id));
+    if(whole) ids.forEach(id=>hidden.add(id));        // category fully on → toggle it off
+    else      ids.forEach(id=>hidden.delete(id));     // otherwise add the whole category
+  }
+  syncChecks();
+  refreshFilters();
+  renderDiagram();
+});
+
+refreshFilters();
+
+/* ---------- REGION WIRING ---------- */
+const regionSel  = document.getElementById("regionSel");
+const regionAuto = document.getElementById("regionAuto");
+let userChangedRegion = false;
+
+regionSel.innerHTML = Object.values(MARKETS)
+  .map(m=>`<option value="${m.code}">${m.flag} ${m.label}</option>`).join("");
+
+function updateMarketLinks(){
+  document.querySelectorAll("a.amazon[data-search]").forEach(a=>{ a.href = amazonURL(a.dataset.search); });
+  document.querySelectorAll("a.camel[data-search]").forEach(a=>{
+    const u = camelURL(a.dataset.search);
+    if(u){ a.href = u; a.style.display = ""; } else { a.style.display = "none"; }
+  });
+}
+function applyMarket(code, auto){
+  MARKET = MARKETS[code] || MARKETS.XX;
+  UNIT = unitForMarket(MARKET);
+  regionSel.value = MARKET.code;
+  regionAuto.textContent = auto ? "· auto-detected" : "";
+  updateMarketLinks();
+  updateUnits();
+  renderDiagram();
+}
+regionSel.addEventListener("change", ()=>{ userChangedRegion = true; applyMarket(regionSel.value, false); });
+
+// 1) synchronous best guess from the browser locale (no network, no prompt)
+applyMarket(countryFromLocale() || "XX", false);
+// 2) non-intrusive IP lookup refines it, unless the user has already chosen
+detectCountry().then(cc=>{
+  if(userChangedRegion) return;
+  applyMarket(cc && MARKETS[cc] ? cc : "XX", true);
+});
+</script>
+</body>
+</html>
