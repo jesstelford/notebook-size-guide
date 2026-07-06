@@ -74,9 +74,19 @@ region-aware shopping links.
 - `products[]` — `{ brand, model, size, specs: [[k,v], …], note?, search }`.
   `search` is a **market-neutral** query string used to build both Amazon and Camel links.
 
-**Current 14 sizes** (cards render tallest-first to match the diagram callout order):
-A4, B5 JIS, B5 ISO, B5 Slim (approx), Traveler's Regular, A5, Reporter's (approx),
-B6 JIS, B6 Slim Stalogy, B6 ISO, B6 Slim Midori, A6, Field Notes, Traveler's Passport.
+**Current 20 sizes** (cards render tallest-first to match the diagram callout order):
+A4, B5 JIS, B5 ISO, B5 Slim (approx), Traveler's Regular, A5, Moleskine Large,
+Reporter's (approx), Baron Fig Confidant (approx), Hobonichi Weeks, B6 JIS,
+B6 Slim Stalogy, B6 ISO, B6 Slim Midori, A6, Field Notes, B7 JIS, Traveler's Passport,
+B7 ISO, A7.
+
+- **Moleskine Large** (130×210) — A5-height but 18 mm narrower; covers the whole Moleskine
+  Large line (Classic, Cahier) and the fountain-pen "A5 Slim" 130×210 footprint.
+- **Baron Fig Confidant** (≈137×196, from a 5.4×7.7 in spec) — smaller than A5 on both axes.
+- **Hobonichi Weeks** (94×188) — the only bespoke Hobonichi trim (not A/B); Weeks Mega shares
+  it. The A6 Original and A5 Cousin reuse existing A6/A5 entries (listed there as products).
+- **A7** (74×105 ISO) and **B7** (JIS 91×128 / ISO 88×125). Genuine ISO-B7 notebooks barely
+  exist at retail, so that entry links out to the closest brand substitute (Rhodia No. 12).
 
 `MARKETS` maps an ISO country code → `{ code, label, flag, amazon (host), camel (subdomain
 prefix | null) }`. `camel: null` ⇒ Camel unsupported in that marketplace ⇒ the Camel link is
@@ -88,9 +98,11 @@ hidden. `XX` is the ".com / other" fallback.
   bottom-left corner (largest drawn behind). The `viewBox` is **recomputed each render from
   the visible bounding box**, so hiding larger sizes zooms the rest to fill the container.
   A right-hand gutter holds non-overlapping leader-line callouts (name + dimensions), ordered
-  top-to-bottom by height with a push-down anti-overlap pass. A filled dark
-  **credit-card rectangle (85.6 × 54 mm)** is the to-scale reference. Callout dimensions use
-  the active unit.
+  top-to-bottom by height with a push-down anti-overlap pass. The to-scale reference object
+  (`REF`) is a filled dark **credit-card rectangle (85.6 × 54 mm)** by default, switching to
+  an outlined **US Letter sheet (215.9 × 279.4 mm / 8.5 × 11 in)** when `MARKET.code === "US"`.
+  `REF` is factored into the bounding-box computation so it never clips when only small sizes
+  are visible. Callout dimensions use the active unit.
 - **Cards** — generated from `cardOrder` (= `sizes` sorted by height, descending). Each card:
   visibility checkbox (updates the `hidden` Set + diagram), inline header (checkbox + name +
   tag pill), dimensions (switchable primary unit + mm secondary), use case, and a collapsible
@@ -102,13 +114,15 @@ hidden. `XX` is the ".com / other" fallback.
   - `All` only ever turns **ON**. The first group click from All mode focuses down to that
     group; subsequent clicks are additive (toggle whole categories on/off). Individual
     checkbox changes re-derive all button states.
-  - Groups: `a4`, `a5`, `b5` (3 variants), `b6` (4 variants),
-    `ftr` (Field Notes + Traveler's Regular/Passport + Reporter's), `a6`.
+  - Groups: `a4`, `a5` (A5 + Moleskine Large + Baron Fig), `b5` (3 variants),
+    `b6` (4 variants), `b7` (JIS + ISO), `a6`, `a7`,
+    `ftr` (Field Notes + Traveler's Regular/Passport + Reporter's), `hobo` (Hobonichi Weeks).
 - **Region + units** — `detectCountry()` tries `ipwho.is` (non-intrusive; **no** geolocation
   permission prompt), falls back to browser locale, then `XX`. `applyMarket()` sets the
   marketplace (Amazon + Camel link domains) and the unit (**US/CA → inches, everywhere else →
-  cm**), then refreshes links, dimension text, and the diagram. A dropdown allows manual
-  override; a manual choice suppresses later auto-detection.
+  cm**), then refreshes links, dimension text, and the diagram (which re-picks `REF`: US →
+  Letter sheet, else credit card). A dropdown allows manual override; a manual choice
+  suppresses later auto-detection.
 
 ## Design principles & decisions (the "why")
 
@@ -143,4 +157,5 @@ hidden. `XX` is the ".com / other" fallback.
 
 - Add a `README.md`.
 - Candidate sizes discussed but deferred (add **only** with verified dimensions):
-  Steno (152 × 229), US Letter / Half-Letter / Legal, A7 / B7, other Traveler's-style formats.
+  Steno (152 × 229), US Letter / Half-Letter / Legal as *entries* (Letter is currently only
+  the US scale reference, not a card), other Traveler's-style formats.
