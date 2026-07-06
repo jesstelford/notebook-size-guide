@@ -905,7 +905,9 @@ const loadThree = () => (threePromise ||=
   import("https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"));
 
 // Rendered thickness (mm) from page count + cover type. ~0.1 mm/sheet, 2 pages/sheet.
-const PAGE_MM = 0.05, HARD_MM = 2.0, SOFT_MM = 0.3;
+// HARD_MM / SOFT_MM are the per-cover thicknesses — kept thick enough that the coloured
+// cover edge stays visible even on softcover.
+const PAGE_MM = 0.05, HARD_MM = 2.2, SOFT_MM = 1.0;
 const notebookThickness = (pages, hard) => pages*PAGE_MM + 2*(hard ? HARD_MM : SOFT_MM);
 
 // One reusable grayscale canvas → a faint cloth-like micro-relief used as a shared bumpMap
@@ -921,12 +923,13 @@ function coverBumpTextureCanvas(){
   let seed = 20240607;                                   // deterministic noise
   const rnd = () => { seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed/0x7fffffff; };
   for(let i=0;i<d.length;i+=4){
-    const n = 128 + (rnd()-0.5)*64;
+    const n = 128 + (rnd()-0.5)*120;
     d[i]=d[i+1]=d[i+2]=n; d[i+3]=255;
   }
   ctx.putImageData(img,0,0);
-  ctx.strokeStyle = "rgba(110,110,110,0.45)"; ctx.lineWidth = 1;   // faint weave
+  ctx.strokeStyle = "rgba(80,80,80,0.6)"; ctx.lineWidth = 1;       // faint cross-weave
   for(let x=0;x<S;x+=4){ ctx.beginPath(); ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,S); ctx.stroke(); }
+  for(let y=0;y<S;y+=4){ ctx.beginPath(); ctx.moveTo(0,y+0.5); ctx.lineTo(S,y+0.5); ctx.stroke(); }
   coverBumpCanvas = cv;
   return cv;
 }
@@ -1018,36 +1021,67 @@ view3d = (function(){
     const rim = new THREE.DirectionalLight(0xffffff, 1.0);    // rim/back — separates covers
     rim.position.set(-220, 520, -640);
     scene.add(rim);
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8578, 0.55));   // gentle ambient
+    const hi = new THREE.DirectionalLight(0xffffff, 1.5);     // highlight — grazing top-front, edge definition
+    hi.position.set(80, 460, 140);
+    scene.add(hi);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8578, 0.5));    // gentle ambient
   }
 
-  /* --- notebooks: one multi-material box each, stacked sharing the (0,0) corner --- */
+  /* --- notebooks: each book is 4 prisms — spine + top cover + bottom cover (coloured,
+         textured, cover thickness shown) wrapping a white page block that is recessed on
+         the fore-edge, head and tail so the covers overhang (a concave edge). Books are
+         stacked sharing the spine (x=0) and tail (z=0) edges. --- */
   function makeCoverMaterial(hex){
-    const m = new THREE.MeshStandardMaterial({ color:new THREE.Color(hex), roughness:0.72, metalness:0.02 });
-    m.bumpMap = coverBumpTex; m.bumpScale = 0.55;
+    const m = new THREE.MeshStandardMaterial({ color:new THREE.Color(hex), roughness:0.55, metalness:0.06 });
+    m.bumpMap = coverBumpTex; m.bumpScale = 0.825;      // +50% depth so the weave reads
     return m;
+  }
+  // A box whose vertical (X/Z) edges are rounded — the cover's footprint corners — while
+  // the flat top/bottom faces stay crisp (so the highlight still catches a clean edge).
+  function roundedBoxGeoXZ(w, hy, d, r){
+    r = Math.max(0, Math.min(r, w/2 - 0.01, d/2 - 0.01));
+    const g = new THREE.BoxGeometry(w, hy, d, 3, 1, 3);
+    if(r <= 0) return g;
+    const pos = g.attributes.position, hx = w/2 - r, hz = d/2 - r;
+    for(let i=0;i<pos.count;i++){
+      const x = pos.getX(i), z = pos.getZ(i);
+      const ix = Math.max(-hx, Math.min(hx, x)), iz = Math.max(-hz, Math.min(hz, z));
+      const dx = x - ix, dz = z - iz, len = Math.hypot(dx, dz);
+      if(len > 1e-6){ const k = r/len; pos.setX(i, ix + dx*k); pos.setZ(i, iz + dz*k); }
+    }
+    g.computeVertexNormals();
+    return g;
+  }
+  function addBook(s, y0, t){
+    const cover  = makeCoverMaterial(s.color);
+    const coverT = state3d.hard ? HARD_MM : SOFT_MM;
+    const over   = state3d.hard ? 2.0 : 1.2;            // cover overhang / page recess
+    const spineT = state3d.hard ? 2.6 : 1.8;
+    const pagesT = Math.max(0.4, t - 2*coverT);
+    const r      = Math.min(2.6, s.w*0.06, s.h*0.06);  // rounded cover corners (X/Z)
+    const add = (geo, mat, cx, cy, cz)=>{
+      const m = new THREE.Mesh(geo, mat);
+      m.castShadow = true; m.receiveShadow = true;
+      m.position.set(cx, y0 + cy, cz);                 // footprint x∈[0,w], z∈[-h,0]; spine x=0, tail z=0
+      notebookGroup.add(m);
+    };
+    add(roundedBoxGeoXZ(s.w, coverT, s.h, r), cover, s.w/2, coverT/2,      -s.h/2);   // bottom cover
+    add(roundedBoxGeoXZ(s.w, coverT, s.h, r), cover, s.w/2, t - coverT/2,  -s.h/2);   // top cover
+    add(new THREE.BoxGeometry(spineT, pagesT, s.h), cover, spineT/2, coverT + pagesT/2, -s.h/2);  // spine
+    const px0 = 0.8, px1 = s.w - over, pz0 = -s.h + over, pz1 = -over;                // recessed pages
+    add(new THREE.BoxGeometry(px1 - px0, pagesT, pz1 - pz0), pagesMat,
+        (px0+px1)/2, coverT + pagesT/2, (pz0+pz1)/2);
+    labelAnchors.push({ s, p:new THREE.Vector3(s.w, y0 + t, -s.h) });   // head + fore-edge top corner
   }
   function buildNotebooks(){
     if(notebookGroup){ disposeGroup(notebookGroup); scene.remove(notebookGroup); }
     notebookGroup = new THREE.Group();
     labelAnchors  = [];
-
     // largest footprint at the bottom (mirrors the SVG's "largest behind" convention)
     const visible = sizes.filter(s=>!hidden.has(s.id)).sort((a,b)=>(b.w*b.h)-(a.w*a.h));
     const t = notebookThickness(state3d.pages, state3d.hard);
     let y0 = 0;
-    visible.forEach(s=>{
-      const geo   = new THREE.BoxGeometry(s.w, t, s.h);
-      const cover = makeCoverMaterial(s.color);
-      // BoxGeometry face order: +X,-X,+Y,-Y,+Z,-Z. Spine is the -X face (at x=0);
-      // covers wrap spine + top + bottom, pages show on fore-edge/head/tail.
-      const mesh = new THREE.Mesh(geo, [pagesMat, cover, cover, cover, pagesMat, pagesMat]);
-      mesh.castShadow = true; mesh.receiveShadow = true;
-      mesh.position.set(s.w/2, y0 + t/2, s.h/2);         // footprint spans [0,w]×[0,h]
-      notebookGroup.add(mesh);
-      labelAnchors.push({ s, p:new THREE.Vector3(s.w, y0 + t, s.h) });   // outer fore-edge top corner
-      y0 += t;
-    });
+    visible.forEach(s=>{ addBook(s, y0, t); y0 += t; });
     scene.add(notebookGroup);
   }
 
@@ -1072,23 +1106,23 @@ view3d = (function(){
       if(v.z > -1 && v.z < 1) pts.push({ s:a.s, x:(v.x*0.5+0.5)*w, y:(-v.y*0.5+0.5)*h });
     });
     if(!pts.length){ overlay.innerHTML = ""; return; }
-    const LH = 30, colX = Math.max(200, w - 196);        // fixed right-hand gutter, clear of the pile
+    const LH = 19, colX = Math.max(160, w - 244);        // fixed right-hand gutter, clear of the pile
     // Stack callouts top-to-bottom with a push-down anti-overlap pass (as in the 2D view)…
     pts.sort((a,b)=>a.y - b.y);
     const rows = [];
     let lastY = -1e9;
     pts.forEach(p=>{ const ly = Math.max(p.y, lastY + LH); lastY = ly; rows.push({ p, ly }); });
     // …then shift the whole column up if it runs past the bottom edge.
-    const overflow = lastY - (h - 8);
-    if(overflow > 0){ const shift = Math.min(overflow, rows[0].ly - 8); rows.forEach(r=>r.ly -= shift); }
+    const overflow = lastY - (h - 6);
+    if(overflow > 0){ const shift = Math.min(overflow, rows[0].ly - 6); rows.forEach(r=>r.ly -= shift); }
     let out = "";
     rows.forEach(({p, ly})=>{
       const name = `${p.s.name} · ${shortTag(p.s.tag)}`;
       const dims = fmtDim(p.s.w, p.s.h, UNIT, p.s.approx);
+      // single line, styled exactly like the 2D diagram's callouts
       out += `<line x1="${p.x.toFixed(1)}" y1="${p.y.toFixed(1)}" x2="${(colX-6).toFixed(1)}" y2="${ly.toFixed(1)}" stroke="${p.s.color}" stroke-width="1" stroke-opacity="0.6"/>`
            + `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2" fill="${p.s.color}"/>`
-           + `<text x="${colX}" y="${(ly-2).toFixed(1)}" font-size="12" font-weight="600" fill="${p.s.color}">${esc(name)}</text>`
-           + `<text x="${colX}" y="${(ly+12).toFixed(1)}" font-size="11" fill="#5A6270">${esc(dims)}</text>`;
+           + `<text x="${colX}" y="${(ly+3.5).toFixed(1)}" font-size="10.5"><tspan fill="${p.s.color}" font-weight="600">${esc(name)}</tspan><tspan fill="#5A6270">   ${esc(dims)}</tspan></text>`;
     });
     overlay.innerHTML = out;
   }
@@ -1120,9 +1154,25 @@ view3d = (function(){
     });
   }
 
-  /* --- pointer-drag orbit + wheel zoom + resize --- */
-  const onDown = e=>{ dragging=true; lastX=e.clientX; lastY=e.clientY; if(canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId); };
+  /* --- pointer-drag orbit + wheel / pinch zoom + resize --- */
+  const pointers = new Map();                            // active pointers (for touch pinch)
+  let pinchDist0 = 0;
+  const zoomTo = f => { dist = Math.max(80, Math.min(6000, dist*f)); requestRender(); };
+  const pinchSpan = ()=>{ const p=[...pointers.values()]; return p.length<2 ? 0 : Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y); };
+  const onDown = e=>{
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(canvas.setPointerCapture){ try{ canvas.setPointerCapture(e.pointerId); }catch(_){} }
+    if(pointers.size === 1){ dragging=true; lastX=e.clientX; lastY=e.clientY; }
+    else { dragging=false; pinchDist0 = pinchSpan(); }   // second finger down → start pinch
+  };
   const onMove = e=>{
+    if(!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(pointers.size >= 2){                               // two fingers → pinch-zoom
+      const d = pinchSpan();
+      if(pinchDist0 > 0 && d > 0){ zoomTo(pinchDist0/d); pinchDist0 = d; }
+      return;
+    }
     if(!dragging) return;
     azimuth -= (e.clientX-lastX)*0.008;
     polar   -= (e.clientY-lastY)*0.008;
@@ -1130,8 +1180,14 @@ view3d = (function(){
     lastX = e.clientX; lastY = e.clientY;
     requestRender();
   };
-  const onUp = e=>{ dragging=false; if(canvas && canvas.releasePointerCapture){ try{ canvas.releasePointerCapture(e.pointerId); }catch(_){} } };
-  const onWheel = e=>{ e.preventDefault(); dist *= (1 + Math.sign(e.deltaY)*0.08); dist = Math.max(80, Math.min(6000, dist)); requestRender(); };
+  const onUp = e=>{
+    pointers.delete(e.pointerId);
+    if(pointers.size < 2) pinchDist0 = 0;
+    if(pointers.size === 1){ const p=[...pointers.values()][0]; dragging=true; lastX=p.x; lastY=p.y; }  // resume orbit
+    else if(pointers.size === 0) dragging=false;
+    if(canvas && canvas.releasePointerCapture){ try{ canvas.releasePointerCapture(e.pointerId); }catch(_){} }
+  };
+  const onWheel = e=>{ e.preventDefault(); zoomTo(1 + Math.sign(e.deltaY)*0.08); };
   const onResize = ()=>{
     if(!renderer) return;
     const w = stageContentWidth(), h = Math.max(320, Math.round(w*0.6));
@@ -1143,6 +1199,7 @@ view3d = (function(){
     canvas.addEventListener("pointerdown", onDown);
     canvas.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
     canvas.addEventListener("wheel", onWheel, {passive:false});
     window.addEventListener("resize", onResize);
   }
@@ -1153,7 +1210,9 @@ view3d = (function(){
       canvas.removeEventListener("wheel", onWheel);
     }
     window.removeEventListener("pointerup", onUp);
+    window.removeEventListener("pointercancel", onUp);
     window.removeEventListener("resize", onResize);
+    pointers.clear(); pinchDist0 = 0; dragging = false;
   }
 
   /* --- mount / rebuild / unmount --- */
