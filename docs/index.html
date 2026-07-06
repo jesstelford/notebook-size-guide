@@ -43,6 +43,37 @@
   }
   .diagram{width:100%;height:auto;display:block;overflow:visible;}
   .diagram text{font-family:"IBM Plex Mono",monospace;}
+
+  /* 3D view: toggle button (top-right of stage), loading overlay, canvas, controls */
+  .view3d-btn{
+    position:absolute;top:14px;right:14px;z-index:2;
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
+    background:var(--panel);border:1px solid var(--rule);border-radius:20px;
+    padding:5px 12px;cursor:pointer;transition:background .12s,color .12s,border-color .12s;
+  }
+  .view3d-btn:hover{border-color:var(--ink-soft);color:var(--ink);}
+  .view3d-btn.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .view3d-loading{
+    position:absolute;inset:0;display:grid;place-items:center;z-index:3;
+    font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--ink-faint);background:rgba(255,255,255,.6);
+  }
+  .nb-canvas{display:block;border-radius:8px;cursor:grab;touch-action:none;max-width:100%;}
+  .nb-canvas:active{cursor:grabbing;}
+  /* View-locked label callouts (name + dims + leader line) drawn over the WebGL canvas,
+     reusing the 2D diagram's callout style so text stays crisp and always readable. */
+  .nb-overlay{position:absolute;pointer-events:none;z-index:1;overflow:visible;}
+  .nb-overlay text{font-family:"IBM Plex Mono",monospace;}
+  .nb-controls{
+    display:flex;align-items:center;gap:8px;
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
+  }
+  .nb-controls label{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--ink-faint);}
+  .nb-controls select{
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink);
+    background:var(--panel);border:1px solid var(--rule);border-radius:20px;padding:5px 10px;cursor:pointer;
+  }
+  .nb-controls select:hover{border-color:var(--ink-soft);}
   .stage-foot{
     display:flex;justify-content:space-between;align-items:center;gap:12px;
     margin-top:6px;flex-wrap:wrap;
@@ -163,6 +194,7 @@
 
   <div class="stage">
     <svg id="diagram" class="diagram" role="img" aria-label="Notebook sizes overlaid to scale with labelled callouts."></svg>
+    <button class="view3d-btn" id="view3dBtn" type="button" hidden aria-label="Toggle 3D notebook view">3D</button>
   </div>
   <div class="stage-foot">
     <div class="filters" id="filters">
@@ -186,6 +218,16 @@
         <label>Baseline</label>
         <button class="fbtn" data-baseline="card" type="button">Credit Card</button>
         <button class="fbtn" data-baseline="letter" type="button">US Letter</button>
+      </div>
+      <div class="nb-controls" id="nbControls" hidden>
+        <label>Cover</label>
+        <button class="fbtn active" id="coverBtn" type="button">Hardcover</button>
+        <label>Pages</label>
+        <select id="pagesSel" aria-label="Notebook page count">
+          <option value="50">50</option>
+          <option value="120" selected>120</option>
+          <option value="280">280</option>
+        </select>
       </div>
     </div>
   </div>
@@ -584,6 +626,11 @@ const BASELINES = {
   letter: {w:215.9, h:279.4, label:"US LETTER · 8.5 × 11 in",  solid:false}
 };
 
+// The 3D-view controller (assigned at the end of the script). While it's active,
+// renderDiagram() dispatches to it instead of drawing the SVG — this is the single
+// integration hook, so every existing renderDiagram() caller updates the 3D scene too.
+let view3d = null;
+
 function esc(t){return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
 const shortTag = t => t.split("·")[0].trim();
 
@@ -591,6 +638,7 @@ const shortTag = t => t.split("·")[0].trim();
 // recomputed each time from the visible bounding box, so the boxes + labels grow
 // to fill the container when larger sizes are hidden, and labels hug the widest box.
 function renderDiagram(){
+  if(view3d && view3d.active){ view3d.rebuild(); return; }   // 3D mounted → update the scene instead
   const visible = sizes.filter(s=>!hidden.has(s.id));
   if(visible.length === 0){
     svg.setAttribute("viewBox","0 0 200 60");
@@ -826,6 +874,360 @@ detectCountry().then(cc=>{
   if(userChangedRegion) return;
   applyMarket(cc && MARKETS[cc] ? cc : "XX", true);
 });
+
+/* ---------- 3D VIEW ----------
+   Optional WebGL scene: the visible sizes rendered as physical notebooks stacked in a
+   pile, sharing a spine + bottom corner (the 3D analogue of the SVG's shared corner).
+   Three.js core is lazy-loaded from a CDN only on first toggle. The controller object is
+   assigned to `view3d` (declared up in the DIAGRAM section) so renderDiagram()'s guard
+   routes every size/unit change here while 3D is active. Render-on-demand (no idle loop). */
+const stageEl    = document.querySelector(".stage");
+const view3dBtn  = document.getElementById("view3dBtn");
+const nbControls = document.getElementById("nbControls");
+const coverBtn   = document.getElementById("coverBtn");
+const pagesSel   = document.getElementById("pagesSel");
+const baselineWrap = document.getElementById("baseline");
+
+// Global (all-notebook) cover + page controls, shown only in 3D mode.
+const state3d = { hard:true, pages:120 };
+
+function webglOK(){
+  try{
+    const c = document.createElement("canvas");
+    return !!(window.WebGLRenderingContext && (c.getContext("webgl2") || c.getContext("webgl")));
+  }catch(e){ return false; }
+}
+
+// Lazy ESM import, cached so re-toggling never refetches. A remote https:// module URL
+// loads even from a bare file:// open (like the existing fonts / ipwho.is fetches).
+let threePromise = null;
+const loadThree = () => (threePromise ||=
+  import("https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"));
+
+// Rendered thickness (mm) from page count + cover type. ~0.1 mm/sheet, 2 pages/sheet.
+const PAGE_MM = 0.05, HARD_MM = 2.0, SOFT_MM = 0.3;
+const notebookThickness = (pages, hard) => pages*PAGE_MM + 2*(hard ? HARD_MM : SOFT_MM);
+
+// One reusable grayscale canvas → a faint cloth-like micro-relief used as a shared bumpMap
+// on every cover (color still comes from each material). No external image assets.
+let coverBumpCanvas = null;
+function coverBumpTextureCanvas(){
+  if(coverBumpCanvas) return coverBumpCanvas;
+  const S = 128, cv = document.createElement("canvas");
+  cv.width = cv.height = S;
+  const ctx = cv.getContext("2d");
+  ctx.fillStyle = "#808080"; ctx.fillRect(0,0,S,S);
+  const img = ctx.getImageData(0,0,S,S), d = img.data;
+  let seed = 20240607;                                   // deterministic noise
+  const rnd = () => { seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed/0x7fffffff; };
+  for(let i=0;i<d.length;i+=4){
+    const n = 128 + (rnd()-0.5)*64;
+    d[i]=d[i+1]=d[i+2]=n; d[i+3]=255;
+  }
+  ctx.putImageData(img,0,0);
+  ctx.strokeStyle = "rgba(110,110,110,0.45)"; ctx.lineWidth = 1;   // faint weave
+  for(let x=0;x<S;x+=4){ ctx.beginPath(); ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,S); ctx.stroke(); }
+  coverBumpCanvas = cv;
+  return cv;
+}
+
+view3d = (function(){
+  let THREE=null, renderer=null, scene=null, camera=null, canvas=null;
+  let notebookGroup=null, labelAnchors=[], overlay=null, table=null, pagesMat=null, coverBumpTex=null;
+  let target=null, rafId=0, needsRender=false;
+  let azimuth=Math.PI*0.18, polar=Math.PI*0.36, dist=600;
+  let dragging=false, lastX=0, lastY=0;
+  const ctrl = { active:false };
+
+  /* --- render-on-demand --- */
+  function requestRender(){
+    if(!renderer) return;
+    needsRender = true;
+    if(!rafId) rafId = requestAnimationFrame(draw);
+  }
+  function draw(){
+    rafId = 0;
+    if(!renderer || !needsRender) return;
+    needsRender = false;
+    positionCamera();
+    renderer.render(scene, camera);
+    renderOverlay();
+  }
+  function positionCamera(){
+    if(!camera || !target) return;
+    const sp = Math.sin(polar), cp = Math.cos(polar);
+    camera.position.set(
+      target.x + dist*sp*Math.sin(azimuth),
+      target.y + dist*cp,
+      target.z + dist*sp*Math.cos(azimuth)
+    );
+    camera.up.set(0,1,0);
+    camera.lookAt(target);
+  }
+
+  /* --- scene scaffolding (table + three-point lighting + shared materials) --- */
+  function stageContentWidth(){
+    const cs = getComputedStyle(stageEl);
+    const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    return Math.max(280, stageEl.clientWidth - padX);
+  }
+  function buildScene(){
+    const w = stageContentWidth(), h = Math.max(320, Math.round(w*0.6));
+    renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+    renderer.setSize(w, h);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    if("outputColorSpace" in renderer) renderer.outputColorSpace = THREE.SRGBColorSpace;
+    canvas = renderer.domElement;
+    canvas.className = "nb-canvas";
+    stageEl.insertBefore(canvas, view3dBtn);           // sits under the (absolute) button
+    overlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    overlay.setAttribute("class", "nb-overlay");
+    stageEl.insertBefore(overlay, view3dBtn);
+    syncOverlay();
+
+    scene  = new THREE.Scene();
+    target = new THREE.Vector3();
+    camera = new THREE.PerspectiveCamera(38, w/h, 1, 12000);
+
+    pagesMat = new THREE.MeshStandardMaterial({ color:0xF6F5F0, roughness:0.9, metalness:0.0 });
+    coverBumpTex = new THREE.CanvasTexture(coverBumpTextureCanvas());
+    coverBumpTex.wrapS = coverBumpTex.wrapT = THREE.RepeatWrapping;
+    coverBumpTex.repeat.set(3,3);
+    coverBumpTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+    const tgeo = new THREE.PlaneGeometry(12000, 12000);
+    const tmat = new THREE.MeshStandardMaterial({ color:0xE7E2D6, roughness:0.98, metalness:0.0 });
+    table = new THREE.Mesh(tgeo, tmat);
+    table.rotation.x = -Math.PI/2;
+    table.receiveShadow = true;
+    scene.add(table);
+
+    const key = new THREE.DirectionalLight(0xffffff, 2.2);   // key — upper front-right, casts shadow
+    key.position.set(420, 640, 520);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    key.shadow.bias = -0.0004;
+    const sc = key.shadow.camera, d = 700;
+    sc.left=-d; sc.right=d; sc.top=d; sc.bottom=-d; sc.near=10; sc.far=4000;
+    scene.add(key);
+    const fill = new THREE.DirectionalLight(0xffffff, 0.75);  // fill — opposite side, no shadow
+    fill.position.set(-520, 320, 260);
+    scene.add(fill);
+    const rim = new THREE.DirectionalLight(0xffffff, 1.0);    // rim/back — separates covers
+    rim.position.set(-220, 520, -640);
+    scene.add(rim);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8578, 0.55));   // gentle ambient
+  }
+
+  /* --- notebooks: one multi-material box each, stacked sharing the (0,0) corner --- */
+  function makeCoverMaterial(hex){
+    const m = new THREE.MeshStandardMaterial({ color:new THREE.Color(hex), roughness:0.72, metalness:0.02 });
+    m.bumpMap = coverBumpTex; m.bumpScale = 0.55;
+    return m;
+  }
+  function buildNotebooks(){
+    if(notebookGroup){ disposeGroup(notebookGroup); scene.remove(notebookGroup); }
+    notebookGroup = new THREE.Group();
+    labelAnchors  = [];
+
+    // largest footprint at the bottom (mirrors the SVG's "largest behind" convention)
+    const visible = sizes.filter(s=>!hidden.has(s.id)).sort((a,b)=>(b.w*b.h)-(a.w*a.h));
+    const t = notebookThickness(state3d.pages, state3d.hard);
+    let y0 = 0;
+    visible.forEach(s=>{
+      const geo   = new THREE.BoxGeometry(s.w, t, s.h);
+      const cover = makeCoverMaterial(s.color);
+      // BoxGeometry face order: +X,-X,+Y,-Y,+Z,-Z. Spine is the -X face (at x=0);
+      // covers wrap spine + top + bottom, pages show on fore-edge/head/tail.
+      const mesh = new THREE.Mesh(geo, [pagesMat, cover, cover, cover, pagesMat, pagesMat]);
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      mesh.position.set(s.w/2, y0 + t/2, s.h/2);         // footprint spans [0,w]×[0,h]
+      notebookGroup.add(mesh);
+      labelAnchors.push({ s, p:new THREE.Vector3(s.w, y0 + t, s.h) });   // outer fore-edge top corner
+      y0 += t;
+    });
+    scene.add(notebookGroup);
+  }
+
+  /* --- view-locked labels: an SVG overlay whose callouts are projected from the 3D
+         anchor corners each frame, then pushed down to avoid overlap (as in the 2D view).
+         Always camera-facing and crisp; the leader lines connect to each box's edge. --- */
+  function syncOverlay(){
+    if(!overlay || !canvas) return;
+    overlay.style.left   = canvas.offsetLeft + "px";
+    overlay.style.top    = canvas.offsetTop + "px";
+    overlay.style.width  = canvas.clientWidth + "px";
+    overlay.style.height = canvas.clientHeight + "px";
+  }
+  function renderOverlay(){
+    if(!overlay || !camera) return;
+    syncOverlay();                                       // keep aligned to the canvas (layout can shift)
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    overlay.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    const v = new THREE.Vector3(), pts = [];
+    labelAnchors.forEach(a=>{
+      v.copy(a.p).project(camera);
+      if(v.z > -1 && v.z < 1) pts.push({ s:a.s, x:(v.x*0.5+0.5)*w, y:(-v.y*0.5+0.5)*h });
+    });
+    if(!pts.length){ overlay.innerHTML = ""; return; }
+    const LH = 30, colX = Math.max(200, w - 196);        // fixed right-hand gutter, clear of the pile
+    // Stack callouts top-to-bottom with a push-down anti-overlap pass (as in the 2D view)…
+    pts.sort((a,b)=>a.y - b.y);
+    const rows = [];
+    let lastY = -1e9;
+    pts.forEach(p=>{ const ly = Math.max(p.y, lastY + LH); lastY = ly; rows.push({ p, ly }); });
+    // …then shift the whole column up if it runs past the bottom edge.
+    const overflow = lastY - (h - 8);
+    if(overflow > 0){ const shift = Math.min(overflow, rows[0].ly - 8); rows.forEach(r=>r.ly -= shift); }
+    let out = "";
+    rows.forEach(({p, ly})=>{
+      const name = `${p.s.name} · ${shortTag(p.s.tag)}`;
+      const dims = fmtDim(p.s.w, p.s.h, UNIT, p.s.approx);
+      out += `<line x1="${p.x.toFixed(1)}" y1="${p.y.toFixed(1)}" x2="${(colX-6).toFixed(1)}" y2="${ly.toFixed(1)}" stroke="${p.s.color}" stroke-width="1" stroke-opacity="0.6"/>`
+           + `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2" fill="${p.s.color}"/>`
+           + `<text x="${colX}" y="${(ly-2).toFixed(1)}" font-size="12" font-weight="600" fill="${p.s.color}">${esc(name)}</text>`
+           + `<text x="${colX}" y="${(ly+12).toFixed(1)}" font-size="11" fill="#5A6270">${esc(dims)}</text>`;
+    });
+    overlay.innerHTML = out;
+  }
+
+  /* --- camera framing recomputed from the visible bounds (preserving orbit angles) --- */
+  function frameScene(reset){
+    if(reset){ azimuth = Math.PI*0.18; polar = Math.PI*0.36; }
+    const box = new THREE.Box3().setFromObject(notebookGroup);
+    if(box.isEmpty()){ target.set(0,0,0); dist = 400; requestRender(); return; }
+    box.getCenter(target);
+    const size = new THREE.Vector3(); box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov = camera.fov*Math.PI/180;
+    dist = (maxDim/2)/Math.tan(fov/2)*1.4 + maxDim*0.35;
+    requestRender();
+  }
+
+  /* --- disposal --- */
+  function disposeGroup(g){
+    g.traverse(o=>{
+      if(o.geometry) o.geometry.dispose();
+      const m = o.material;
+      if(!m) return;
+      (Array.isArray(m) ? m : [m]).forEach(mm=>{
+        if(mm === pagesMat) return;                        // shared, disposed at unmount
+        if(mm.map && mm.map !== coverBumpTex) mm.map.dispose();
+        mm.dispose();
+      });
+    });
+  }
+
+  /* --- pointer-drag orbit + wheel zoom + resize --- */
+  const onDown = e=>{ dragging=true; lastX=e.clientX; lastY=e.clientY; if(canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId); };
+  const onMove = e=>{
+    if(!dragging) return;
+    azimuth -= (e.clientX-lastX)*0.008;
+    polar   -= (e.clientY-lastY)*0.008;
+    polar = Math.max(0.05, Math.min(Math.PI/2 - 0.02, polar));   // stay above the table
+    lastX = e.clientX; lastY = e.clientY;
+    requestRender();
+  };
+  const onUp = e=>{ dragging=false; if(canvas && canvas.releasePointerCapture){ try{ canvas.releasePointerCapture(e.pointerId); }catch(_){} } };
+  const onWheel = e=>{ e.preventDefault(); dist *= (1 + Math.sign(e.deltaY)*0.08); dist = Math.max(80, Math.min(6000, dist)); requestRender(); };
+  const onResize = ()=>{
+    if(!renderer) return;
+    const w = stageContentWidth(), h = Math.max(320, Math.round(w*0.6));
+    renderer.setSize(w, h); camera.aspect = w/h; camera.updateProjectionMatrix();
+    syncOverlay();
+    requestRender();
+  };
+  function attachListeners(){
+    canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    canvas.addEventListener("wheel", onWheel, {passive:false});
+    window.addEventListener("resize", onResize);
+  }
+  function detachListeners(){
+    if(canvas){
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("wheel", onWheel);
+    }
+    window.removeEventListener("pointerup", onUp);
+    window.removeEventListener("resize", onResize);
+  }
+
+  /* --- mount / rebuild / unmount --- */
+  ctrl.mount = async function(){
+    const overlay = document.createElement("div");
+    overlay.className = "view3d-loading";
+    overlay.textContent = "Loading 3D…";
+    stageEl.appendChild(overlay);
+    try{
+      THREE = await loadThree();
+      buildScene();
+      buildNotebooks();
+      frameScene(true);
+      attachListeners();
+      svg.style.display = "none";
+      baselineWrap.hidden = true;
+      nbControls.hidden = false;
+      ctrl.active = true;
+      view3dBtn.textContent = "2D";
+      view3dBtn.classList.add("active");
+      requestRender();
+    }catch(err){
+      console.error("3D view failed to load", err);
+      view3dBtn.textContent = "3D ✕";
+      setTimeout(()=>{ if(!ctrl.active) view3dBtn.textContent = "3D"; }, 2200);
+    }finally{
+      overlay.remove();
+    }
+  };
+  ctrl.rebuild = function(){
+    if(!ctrl.active || !renderer) return;
+    buildNotebooks();
+    frameScene(false);                                  // keep the user's orbit angles
+  };
+  ctrl.unmount = function(){
+    ctrl.active = false;
+    if(rafId){ cancelAnimationFrame(rafId); rafId = 0; }
+    needsRender = false;
+    detachListeners();
+    if(notebookGroup){ disposeGroup(notebookGroup); scene.remove(notebookGroup); notebookGroup = null; }
+    labelAnchors = [];
+    if(overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    overlay = null;
+    if(table){ table.geometry.dispose(); table.material.dispose(); scene.remove(table); table = null; }
+    if(pagesMat){ pagesMat.dispose(); pagesMat = null; }
+    if(coverBumpTex){ coverBumpTex.dispose(); coverBumpTex = null; }
+    if(renderer){
+      renderer.dispose();
+      if(renderer.forceContextLoss) renderer.forceContextLoss();
+      if(canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
+    }
+    renderer = null; scene = null; camera = null; canvas = null; THREE = null;
+    nbControls.hidden = true;
+    baselineWrap.hidden = false;
+    svg.style.display = "";
+    view3dBtn.textContent = "3D";
+    view3dBtn.classList.remove("active");
+    renderDiagram();                                    // repaint the SVG
+  };
+
+  return ctrl;
+})();
+
+/* --- 3D control wiring (button gated on WebGL availability) --- */
+view3dBtn.addEventListener("click", ()=>{ if(view3d.active) view3d.unmount(); else view3d.mount(); });
+coverBtn.addEventListener("click", ()=>{
+  state3d.hard = !state3d.hard;
+  coverBtn.textContent = state3d.hard ? "Hardcover" : "Softcover";
+  coverBtn.classList.toggle("active", state3d.hard);
+  view3d.rebuild();
+});
+pagesSel.addEventListener("change", ()=>{ state3d.pages = +pagesSel.value; view3d.rebuild(); });
+
+if(webglOK()) view3dBtn.hidden = false;
 </script>
 </body>
 </html>
