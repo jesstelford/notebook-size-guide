@@ -59,6 +59,12 @@
   }
   .region select:hover{border-color:var(--ink-soft);}
   .region-auto{font-size:10px;color:var(--ink-faint);}
+  .foot-right{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .baseline{
+    display:flex;align-items:center;gap:6px;
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
+  }
+  .baseline label{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--ink-faint);}
   .filters{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
   .fbtn{
     font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
@@ -168,13 +174,19 @@
       <button class="fbtn" data-group="b7" type="button">B7</button>
       <button class="fbtn" data-group="a6" type="button">A6</button>
       <button class="fbtn" data-group="a7" type="button">A7</button>
-      <button class="fbtn" data-group="ftr" type="button">Field/Traveller/Reporter</button>
-      <button class="fbtn" data-group="hobo" type="button">Hobonichi</button>
+      <button class="fbtn" data-group="ftr" type="button">Field/Traveller/Reporter/Weeks</button>
     </div>
-    <div class="region">
-      <label for="regionSel">Region</label>
-      <select id="regionSel" aria-label="Marketplace region for shopping links"></select>
-      <span class="region-auto" id="regionAuto"></span>
+    <div class="foot-right">
+      <div class="region">
+        <label for="regionSel">Region</label>
+        <select id="regionSel" aria-label="Marketplace region for shopping links"></select>
+        <span class="region-auto" id="regionAuto"></span>
+      </div>
+      <div class="baseline" id="baseline">
+        <label>Baseline</label>
+        <button class="fbtn" data-baseline="card" type="button">Credit Card</button>
+        <button class="fbtn" data-baseline="letter" type="button">US Letter</button>
+      </div>
     </div>
   </div>
 
@@ -188,7 +200,7 @@
     </div>
     <div class="note">
       <h4>Scale reference</h4>
-      <p>Every drawing includes a to-scale object you already know for size: a <strong>credit card</strong> (85.6 × 54 mm) by default, switching to a sheet of <strong>US Letter</strong> (8.5 × 11 in) when your region is the United States.</p>
+      <p>Toggle a to-scale object you already know for size under <strong>Baseline</strong>: a <strong>credit card</strong> (85.6 × 54 mm) and/or a sheet of <strong>US Letter</strong> (8.5 × 11 in). Your region picks the default — US Letter in the United States, credit card everywhere else — and you can show either, both, or neither.</p>
     </div>
     <div class="note">
       <h4>On "Slim" sizes</h4>
@@ -563,6 +575,14 @@ const sizes = [
 /* ---------- DIAGRAM ---------- */
 const svg = document.getElementById("diagram");
 const hidden = new Set();
+// Active to-scale baseline references drawn in the diagram (toggled by the Baseline
+// buttons). "card" = credit card (filled block); "letter" = US Letter sheet (outlined
+// frame). Both can be on at once. The region default is set in applyMarket().
+const baselines = new Set();
+const BASELINES = {
+  card:   {w:85.6,  h:54,    label:"CREDIT CARD · 85.6 × 54", solid:true},
+  letter: {w:215.9, h:279.4, label:"US LETTER · 8.5 × 11 in",  solid:false}
+};
 
 function esc(t){return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
 const shortTag = t => t.split("·")[0].trim();
@@ -578,15 +598,13 @@ function renderDiagram(){
     return;
   }
 
-  // To-scale reference object at the shared bottom-left corner. US marketplace →
-  // a sheet of US Letter (8.5×11 in); everywhere else → a credit card. It's factored
-  // into the bounds below so it's never clipped when only small sizes are visible.
-  const REF = MARKET.code === "US"
-    ? {w:215.9, h:279.4, label:"US LETTER · 8.5 × 11 in", solid:false}
-    : {w:85.6,  h:54,    label:"CREDIT CARD · 85.6 × 54", solid:true};
+  // Active to-scale baseline references at the shared bottom-left corner (Credit Card
+  // and/or US Letter, per the Baseline buttons). Factored into the bounds below so they
+  // never clip. Letter first so its outline sits behind the filled card when both show.
+  const refs = ["letter","card"].filter(k=>baselines.has(k)).map(k=>BASELINES[k]);
 
-  const B    = Math.max(...visible.map(s=>s.h), REF.h);   // baseline (bottom edge) = tallest of sizes + reference
-  const Wmax = Math.max(...visible.map(s=>s.w), REF.w);   // widest visible box (incl. reference)
+  const B    = Math.max(...visible.map(s=>s.h), ...refs.map(r=>r.h));   // baseline (bottom edge) = tallest of sizes + refs
+  const Wmax = Math.max(...visible.map(s=>s.w), ...refs.map(r=>r.w));   // widest visible box (incl. refs)
 
   // boxes, largest behind so smaller ones read on top
   const rects = [...visible].sort((a,b)=>(b.w*b.h)-(a.w*a.h)).map(s=>{
@@ -594,15 +612,17 @@ function renderDiagram(){
     return `<rect x="0" y="${y}" width="${s.w}" height="${s.h}" fill="${s.color}" fill-opacity="0.13" stroke="${s.color}" stroke-width="1"/>`;
   }).join("");
 
-  // scale reference at the shared bottom-left corner. The small card is a filled
+  // scale references at the shared bottom-left corner. The small card is a filled
   // block that reads over the washes; the large Letter sheet is an outlined frame
   // (light fill) so it surrounds the notebooks without hiding them.
-  const refY = B - REF.h;
-  const ref = REF.solid
-    ? `<rect x="0" y="${refY}" width="${REF.w}" height="${REF.h}" rx="2.5" fill="#3B424E" fill-opacity="0.94" stroke="#20252E" stroke-width="0.7"/>
-    <text x="${REF.w/2}" y="${refY+REF.h/2+1.9}" text-anchor="middle" font-size="4.9" fill="#FFFFFF" font-weight="600" letter-spacing="0.3">${REF.label}</text>`
-    : `<rect x="0" y="${refY}" width="${REF.w}" height="${REF.h}" rx="1" fill="#3B424E" fill-opacity="0.05" stroke="#3B424E" stroke-width="0.8" stroke-dasharray="4 2.5"/>
-    <text x="3.5" y="${refY+8}" font-size="7" fill="#3B424E" font-weight="600" letter-spacing="0.3">${REF.label}</text>`;
+  const ref = refs.map(r=>{
+    const ry = B - r.h;
+    return r.solid
+      ? `<rect x="0" y="${ry}" width="${r.w}" height="${r.h}" rx="2.5" fill="#3B424E" fill-opacity="0.94" stroke="#20252E" stroke-width="0.7"/>
+    <text x="${r.w/2}" y="${ry+r.h/2+1.9}" text-anchor="middle" font-size="4.9" fill="#FFFFFF" font-weight="600" letter-spacing="0.3">${r.label}</text>`
+      : `<rect x="0" y="${ry}" width="${r.w}" height="${r.h}" rx="1" fill="#3B424E" fill-opacity="0.05" stroke="#3B424E" stroke-width="0.8" stroke-dasharray="4 2.5"/>
+    <text x="3.5" y="${ry+8}" font-size="7" fill="#3B424E" font-weight="600" letter-spacing="0.3">${r.label}</text>`;
+  }).join("");
 
   // labels in a gutter that hugs the widest visible box; stacked top-to-bottom, no overlap
   const FS = 7, GAPY = FS*1.9;
@@ -670,7 +690,7 @@ function cardHTML(s){
       <span class="alt">${esc(s.alt)}</span></p>
     <p class="use">${esc(s.use)}</p>
     <details>
-      <summary>${chev} Dot / grid picks · price via Camel <span class="count">${countLabel}</span></summary>
+      <summary>${chev} Details &amp; Price <span class="count">${countLabel}</span></summary>
       ${noneBlock}${prods}
     </details>
   </div>`;
@@ -697,8 +717,7 @@ const GROUPS = {
   b7:  ["b7jis","b7iso"],
   a6:  ["a6"],
   a7:  ["a7"],
-  ftr: ["fieldnotes","tn_regular","tn_passport","reporters"],
-  hobo:["hobonichi_weeks"]
+  ftr: ["fieldnotes","tn_regular","tn_passport","reporters","hobonichi_weeks"]
 };
 
 function syncChecks(){
@@ -760,6 +779,24 @@ let userChangedRegion = false;
 regionSel.innerHTML = Object.values(MARKETS)
   .map(m=>`<option value="${m.code}">${m.flag} ${m.label}</option>`).join("");
 
+/* ---------- BASELINE TOGGLES ----------
+   Two independent to-scale references (Credit Card / US Letter); either, both, or
+   neither can be shown. applyMarket() sets the region default (US → Letter, else Card);
+   these buttons then let the reader override. */
+const baselineEl = document.getElementById("baseline");
+function syncBaselineButtons(){
+  baselineEl.querySelectorAll(".fbtn").forEach(btn=>{
+    btn.classList.toggle("active", baselines.has(btn.dataset.baseline));
+  });
+}
+baselineEl.addEventListener("click", e=>{
+  const btn = e.target.closest(".fbtn"); if(!btn) return;
+  const k = btn.dataset.baseline;
+  if(baselines.has(k)) baselines.delete(k); else baselines.add(k);
+  syncBaselineButtons();
+  renderDiagram();
+});
+
 function updateMarketLinks(){
   document.querySelectorAll("a.amazon[data-search]").forEach(a=>{ a.href = amazonURL(a.dataset.search); });
   document.querySelectorAll("a.camel[data-search]").forEach(a=>{
@@ -772,6 +809,10 @@ function applyMarket(code, auto){
   UNIT = unitForMarket(MARKET);
   regionSel.value = MARKET.code;
   regionAuto.textContent = auto ? "· auto-detected" : "";
+  // Region drives the baseline default: US → US Letter, everywhere else → Credit Card.
+  baselines.clear();
+  baselines.add(MARKET.code === "US" ? "letter" : "card");
+  syncBaselineButtons();
   updateMarketLinks();
   updateUnits();
   renderDiagram();
