@@ -59,6 +59,12 @@
   }
   .region select:hover{border-color:var(--ink-soft);}
   .region-auto{font-size:10px;color:var(--ink-faint);}
+  .foot-right{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .baseline{
+    display:flex;align-items:center;gap:6px;
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
+  }
+  .baseline label{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--ink-faint);}
   .filters{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
   .fbtn{
     font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
@@ -165,13 +171,22 @@
       <button class="fbtn" data-group="a5" type="button">A5</button>
       <button class="fbtn" data-group="b5" type="button">B5</button>
       <button class="fbtn" data-group="b6" type="button">B6</button>
-      <button class="fbtn" data-group="ftr" type="button">Field/Traveller/Reporter</button>
+      <button class="fbtn" data-group="b7" type="button">B7</button>
       <button class="fbtn" data-group="a6" type="button">A6</button>
+      <button class="fbtn" data-group="a7" type="button">A7</button>
+      <button class="fbtn" data-group="ftr" type="button">Field/Traveller/Reporter/Weeks</button>
     </div>
-    <div class="region">
-      <label for="regionSel">Region</label>
-      <select id="regionSel" aria-label="Marketplace region for shopping links"></select>
-      <span class="region-auto" id="regionAuto"></span>
+    <div class="foot-right">
+      <div class="region">
+        <label for="regionSel">Region</label>
+        <select id="regionSel" aria-label="Marketplace region for shopping links"></select>
+        <span class="region-auto" id="regionAuto"></span>
+      </div>
+      <div class="baseline" id="baseline">
+        <label>Baseline</label>
+        <button class="fbtn" data-baseline="card" type="button">Credit Card</button>
+        <button class="fbtn" data-baseline="letter" type="button">US Letter</button>
+      </div>
     </div>
   </div>
 
@@ -182,6 +197,10 @@
     <div class="note">
       <h4>JIS vs ISO B-sizes</h4>
       <p>The B-series exists in two standards. Japanese makers (Kokuyo, Midori, Apica) use <strong>JIS</strong> — a touch taller and narrower. European makers (Leuchtturm1917, Rhodia) use <strong>ISO</strong>. A-sizes (A4, A5, A6) are identical worldwide, so they get a single entry each.</p>
+    </div>
+    <div class="note">
+      <h4>Scale reference</h4>
+      <p>Toggle a to-scale object you already know for size under <strong>Baseline</strong>: a <strong>credit card</strong> (85.6 × 54 mm) and/or a sheet of <strong>US Letter</strong> (8.5 × 11 in). Your region picks the default — US Letter in the United States, credit card everywhere else — and you can show either, both, or neither.</p>
     </div>
     <div class="note">
       <h4>On "Slim" sizes</h4>
@@ -296,7 +315,11 @@ const sizes = [
        search:"Leuchtturm1917 Pocket A6 hardcover dotted"},
       {brand:"Dingbats+", model:"Wildlife A6 Hardcover, Dotted",
        size:"A6 · ~100×150", specs:[["paper","100 gsm"],["pages","~192"],["cover","Hardcover"],["dots","5 mm"]],
-       search:"Dingbats Wildlife A6 hardcover dotted notebook"}
+       search:"Dingbats Wildlife A6 hardcover dotted notebook"},
+      {brand:"Hobonichi", model:"Techo Original (A6) — Daily, Grid",
+       size:"A6 · 105×148", specs:[["paper","~52 gsm"],["cover","Softcover"],["ruling","3.7 mm grid"],["layout","Daily"]],
+       note:"Hobonichi's original day-per-page planner on thin Tomoe-River-style paper; book pairs with a separate cover.",
+       search:"Hobonichi Techo Original A6 English"}
     ]
   },
   {
@@ -312,7 +335,11 @@ const sizes = [
        search:"Rhodia Goalbook A5 dot hardcover"},
       {brand:"Leuchtturm1917", model:"120G Special Edition A5, Dotted",
        size:"A5 · 145×210", specs:[["paper","120 gsm"],["pages","203"],["cover","Hardcover"],["dots","5 mm"]],
-       search:"Leuchtturm1917 120g special edition A5 dotted hardcover"}
+       search:"Leuchtturm1917 120g special edition A5 dotted hardcover"},
+      {brand:"Hobonichi", model:"Techo Cousin (A5) — Daily, Grid",
+       size:"A5 · 148×210", specs:[["paper","~52 gsm"],["cover","Softcover"],["ruling","3.7 mm grid"],["layout","Daily"]],
+       note:"Hobonichi's A5 daily planner (day-per-page + weekly) on thin Tomoe-River-style paper; book pairs with a separate cover.",
+       search:"Hobonichi Techo Cousin A5 English"}
     ]
   },
   {
@@ -451,13 +478,111 @@ const sizes = [
        size:"Reporter · 130×210", specs:[["paper","~70 gsm"],["cover","Hard/soft"],["bind","Top"],["ruling","Ruled"]],
        search:"Moleskine Reporter notebook large"}
     ]
+  },
+  {
+    id:"moleskine_large", name:"Moleskine Large", tag:"brand · non-standard", color:"#4E9A8F",
+    w:130, h:210, mm:"130 × 210 mm", in:"5.12 × 8.27 in", alt:"Moleskine “Large” — A5 height, 18 mm narrower",
+    use:"A5 alternative for journalling — the same height as A5 but a slimmer, taller-feeling page.",
+    none:"Marketed as “A5-ish”, but it isn't A5: Moleskine's Large is <b>130 × 210 mm</b> — the same height as A5 (210) yet 18 mm narrower (A5 is 148). The whole Large line shares this trim (Classic, Cahier, Volant). The fountain-pen “<b>A5 Slim</b>” Tomoe-River notebooks (Sterling Ink / Seven Seas) use the same 130 × 210 footprint.",
+    products:[
+      {brand:"Moleskine", model:"Classic Notebook Large — Dotted (Hardcover)",
+       size:"Large · 130×210", specs:[["paper","70 gsm"],["pages","240"],["cover","Hardcover"],["ruling","Dotted"]],
+       search:"Moleskine Classic Notebook Large hardcover dotted"},
+      {brand:"Moleskine", model:"Cahier Journal Large (3-pack) — Dotted",
+       size:"Large · 130×210", specs:[["paper","70 gsm"],["pages","80 ea."],["cover","Softcover"],["pack","×3"]],
+       search:"Moleskine Cahier Journal Large set of 3 dotted"},
+      {brand:"Sterling Ink", model:"A5 Slim (Tomoe River) — Grid",
+       size:"A5 Slim · 130×210", specs:[["paper","52 gsm"],["pages","520"],["cover","Softcover"],["ruling","Grid"]],
+       note:"Fountain-pen “A5 Slim” — same 130×210 footprint as Moleskine Large, on thin Tomoe River paper.",
+       search:"Sterling Ink A5 Slim Tomoe River notebook grid"}
+    ]
+  },
+  {
+    id:"baronfig", name:"Baron Fig", tag:"Confidant · non-standard", color:"#A0512E", approx:true,
+    w:137, h:196, mm:"≈137 × 196 mm", in:"≈5.39 × 7.72 in", alt:"Baron Fig Confidant (Flagship) — 5.4 × 7.7 in",
+    use:"A5-adjacent hardcover; smaller than A5 on both axes and squarer in the hand.",
+    none:"A house size, not a standard: the Confidant “Flagship” is <b>5.4 × 7.7 in (≈137 × 196 mm)</b> — narrower <i>and</i> shorter than A5 (148 × 210). Cloth hardcover on 90 gsm with a 5 mm dot grid.",
+    products:[
+      {brand:"Baron Fig", model:"Confidant (Flagship) — Dot Grid (Hardcover)",
+       size:"Flagship · ~137×196", specs:[["paper","90 gsm"],["pages","192"],["cover","Hardcover"],["dots","5 mm"]],
+       search:"Baron Fig Confidant hardcover dot grid"}
+    ]
+  },
+  {
+    id:"a7", name:"A7", tag:"ISO · A-series", color:"#C24D86",
+    w:74, h:105, mm:"74 × 105 mm", in:"2.91 × 4.13 in", alt:"half of A6 — identical worldwide",
+    use:"Tiny pocket capture — jotters, micro-lists, a size up from a business card.",
+    products:[
+      {brand:"Midori", model:"MD Notebook A7 — Grid",
+       size:"A7 · 74×105", specs:[["paper","80 gsm"],["pages","176"],["cover","Softcover"],["ruling","5 mm grid"]],
+       note:"True ISO A7 on cream MD paper; also sold as a lighter 3-pack.",
+       search:"Midori MD notebook A7 grid"},
+      {brand:"Leuchtturm1917", model:"Mini (A7) Hardcover, Dotted",
+       size:"LT “A7” · 70×110", specs:[["paper","80 gsm"],["pages","171"],["cover","Hardcover"],["dots","5 mm"]],
+       note:"Leuchtturm's Mini runs 70×110 — off-spec, not exactly ISO A7 (74×105).",
+       search:"Leuchtturm1917 Mini A7 hardcover dotted"},
+      {brand:"Rhodia", model:"No. 11 Staplebound A7 — Dot",
+       size:"A7 · 74×105", specs:[["paper","80 gsm"],["pages","48"],["cover","Softcover"],["ruling","Dot"]],
+       search:"Rhodia No 11 A7 dot pad"}
+    ]
+  },
+  {
+    id:"b7jis", name:"B7", tag:"JIS", color:"#5B54A6",
+    w:91, h:128, mm:"91 × 128 mm", in:"3.58 × 5.04 in", alt:"Japanese B7 (Kokuyo, Maruman, Tsubame)",
+    use:"Palm-size memo — the Japanese pocket-jotter standard; a hair larger than Traveler's Passport.",
+    products:[
+      {brand:"Kokuyo", model:"Campus Notebook B7 — Ruled",
+       size:"B7 · 91×128", specs:[["pages","48 sheets"],["cover","Softcover"],["ruling","6 mm ruled"]],
+       search:"Kokuyo Campus Notebook B7 ruled"},
+      {brand:"Maruman", model:"Mnemosyne B7 Memo Pad — Ruled",
+       size:"B7 · 91×128", specs:[["paper","68 gsm"],["pages","50 sheets"],["cover","Softcover"],["bind","Top"]],
+       search:"Maruman Mnemosyne B7 memo pad"},
+      {brand:"Tsubame", model:"Fools Cream B7 Memo Pad — Graph",
+       size:"B7 · 91×128", specs:[["paper","~84 gsm"],["pages","60 sheets"],["cover","Softcover"],["ruling","5 mm graph"]],
+       search:"Tsubame Note B7 memo pad graph"}
+    ]
+  },
+  {
+    id:"b7iso", name:"B7", tag:"ISO", color:"#9B5EA0",
+    w:88, h:125, mm:"88 × 125 mm", in:"3.46 × 4.92 in", alt:"European B7 — passport / ID-booklet size",
+    use:"The ISO B7 — used for passports and slip cases far more than sold notebooks.",
+    none:"Genuine ISO B7 (88 × 125) notebooks barely exist at retail — European makers stop at A6 (105×148) or a house pocket size. The nearest brand pad is <b>Rhodia No. 12 (85 × 120)</b> — its own size (sometimes labelled “A7+”), not true B7. Traveler's Passport (90×125) shares the 125 mm height.",
+    products:[
+      {brand:"Rhodia", model:"No. 12 Staplebound Pad — Dot (closest substitute)",
+       size:"~B7 · 85×120", specs:[["paper","80 gsm"],["pages","80 sheets"],["cover","Softcover"],["bind","Top"]],
+       note:"85×120 — Rhodia's own pocket size, a touch under ISO B7; the closest mainstream pick.",
+       search:"Rhodia No 12 dot pad"}
+    ]
+  },
+  {
+    id:"hobonichi_weeks", name:"Hobonichi Weeks", tag:"brand · non-standard", color:"#2E8FB0",
+    w:94, h:188, mm:"94 × 188 mm", in:"3.70 × 7.40 in", alt:"tall wallet-format weekly — unique Hobonichi trim",
+    use:"Slim wallet-carry weekly. Its page area ≈ A6 despite the tall, narrow shape.",
+    none:"Hobonichi's one truly bespoke trim (not an A/B size): a tall <b>94 × 188 mm</b> wallet format on thin Tomoe-River-style paper with a 3.55 mm grid and a weekly-per-spread layout. <b>Weeks Mega</b> is the same footprint, just thicker (384 pages). The A6 <b>Original</b> and A5 <b>Cousin</b> reuse standard sizes — see the A6 and A5 cards.",
+    products:[
+      {brand:"Hobonichi", model:"Techo Weeks (book) — Weekly, Grid",
+       size:"Weeks · 94×188", specs:[["paper","~52 gsm"],["pages","240"],["cover","Softcover"],["ruling","3.55 mm grid"]],
+       note:"Book-only; pairs with a separate fabric/leather cover. Weekly + monthly + memo, no daily page.",
+       search:"Hobonichi Techo Weeks English"},
+      {brand:"Hobonichi", model:"Techo Weeks Mega (book) — Weekly, Grid",
+       size:"Weeks · 94×188", specs:[["paper","~52 gsm"],["pages","384"],["cover","Softcover"],["ruling","3.55 mm grid"]],
+       note:"Same 94×188 trim as Weeks, with extra memo pages (~13 mm thick).",
+       search:"Hobonichi Techo Weeks Mega"}
+    ]
   }
 ];
 
 /* ---------- DIAGRAM ---------- */
 const svg = document.getElementById("diagram");
 const hidden = new Set();
-const CARD_W = 85.6, CARD_H = 54;   // standard credit card, to scale (ISO/IEC 7810 ID-1)
+// Active to-scale baseline references drawn in the diagram (toggled by the Baseline
+// buttons). "card" = credit card (filled block); "letter" = US Letter sheet (outlined
+// frame). Both can be on at once. The region default is set in applyMarket().
+const baselines = new Set();
+const BASELINES = {
+  card:   {w:85.6,  h:54,    label:"CREDIT CARD · 85.6 × 54", solid:true},
+  letter: {w:215.9, h:279.4, label:"US LETTER · 8.5 × 11 in",  solid:false}
+};
 
 function esc(t){return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
 const shortTag = t => t.split("·")[0].trim();
@@ -473,8 +598,13 @@ function renderDiagram(){
     return;
   }
 
-  const B    = Math.max(...visible.map(s=>s.h));   // baseline (bottom edge) = tallest visible
-  const Wmax = Math.max(...visible.map(s=>s.w));   // widest visible box
+  // Active to-scale baseline references at the shared bottom-left corner (Credit Card
+  // and/or US Letter, per the Baseline buttons). Factored into the bounds below so they
+  // never clip. Letter first so its outline sits behind the filled card when both show.
+  const refs = ["letter","card"].filter(k=>baselines.has(k)).map(k=>BASELINES[k]);
+
+  const B    = Math.max(...visible.map(s=>s.h), ...refs.map(r=>r.h));   // baseline (bottom edge) = tallest of sizes + refs
+  const Wmax = Math.max(...visible.map(s=>s.w), ...refs.map(r=>r.w));   // widest visible box (incl. refs)
 
   // boxes, largest behind so smaller ones read on top
   const rects = [...visible].sort((a,b)=>(b.w*b.h)-(a.w*a.h)).map(s=>{
@@ -482,9 +612,17 @@ function renderDiagram(){
     return `<rect x="0" y="${y}" width="${s.w}" height="${s.h}" fill="${s.color}" fill-opacity="0.13" stroke="${s.color}" stroke-width="1"/>`;
   }).join("");
 
-  // credit-card scale reference, bottom-left — filled so it reads over the washes
-  const card = `<rect x="0" y="${B-CARD_H}" width="${CARD_W}" height="${CARD_H}" rx="2.5" fill="#3B424E" fill-opacity="0.94" stroke="#20252E" stroke-width="0.7"/>
-    <text x="${CARD_W/2}" y="${B-CARD_H/2+1.9}" text-anchor="middle" font-size="4.9" fill="#FFFFFF" font-weight="600" letter-spacing="0.3">CREDIT CARD · 85.6×54</text>`;
+  // scale references at the shared bottom-left corner. The small card is a filled
+  // block that reads over the washes; the large Letter sheet is an outlined frame
+  // (light fill) so it surrounds the notebooks without hiding them.
+  const ref = refs.map(r=>{
+    const ry = B - r.h;
+    return r.solid
+      ? `<rect x="0" y="${ry}" width="${r.w}" height="${r.h}" rx="2.5" fill="#3B424E" fill-opacity="0.94" stroke="#20252E" stroke-width="0.7"/>
+    <text x="${r.w/2}" y="${ry+r.h/2+1.9}" text-anchor="middle" font-size="4.9" fill="#FFFFFF" font-weight="600" letter-spacing="0.3">${r.label}</text>`
+      : `<rect x="0" y="${ry}" width="${r.w}" height="${r.h}" rx="1" fill="#3B424E" fill-opacity="0.05" stroke="#3B424E" stroke-width="0.8" stroke-dasharray="4 2.5"/>
+    <text x="3.5" y="${ry+8}" font-size="7" fill="#3B424E" font-weight="600" letter-spacing="0.3">${r.label}</text>`;
+  }).join("");
 
   // labels in a gutter that hugs the widest visible box; stacked top-to-bottom, no overlap
   const FS = 7, GAPY = FS*1.9;
@@ -511,7 +649,7 @@ function renderDiagram(){
   const maxX = labelX + labelW + 4;
   const maxY = Math.max(B, lowestLabel + FS) + 6;
   svg.setAttribute("viewBox", `${minX} ${minY} ${(maxX-minX).toFixed(1)} ${(maxY-minY).toFixed(1)}`);
-  svg.innerHTML = rects + card + leaders.join("");
+  svg.innerHTML = rects + ref + leaders.join("");
 }
 
 /* ---------- CARDS ---------- */
@@ -552,7 +690,7 @@ function cardHTML(s){
       <span class="alt">${esc(s.alt)}</span></p>
     <p class="use">${esc(s.use)}</p>
     <details>
-      <summary>${chev} Dot / grid picks · price via Camel <span class="count">${countLabel}</span></summary>
+      <summary>${chev} Details &amp; Price <span class="count">${countLabel}</span></summary>
       ${noneBlock}${prods}
     </details>
   </div>`;
@@ -573,11 +711,13 @@ const filtersEl = document.getElementById("filters");
    Button state is always DERIVED from what's visible (see refreshFilters). */
 const GROUPS = {
   a4:  ["a4"],
-  a5:  ["a5"],
+  a5:  ["a5","moleskine_large","baronfig"],
   b5:  ["b5jis","b5iso","b5slim"],
   b6:  ["b6jis","b6iso","b6slim_midori","b6slim_stalogy"],
-  ftr: ["fieldnotes","tn_regular","tn_passport","reporters"],
-  a6:  ["a6"]
+  b7:  ["b7jis","b7iso"],
+  a6:  ["a6"],
+  a7:  ["a7"],
+  ftr: ["fieldnotes","tn_regular","tn_passport","reporters","hobonichi_weeks"]
 };
 
 function syncChecks(){
@@ -639,6 +779,24 @@ let userChangedRegion = false;
 regionSel.innerHTML = Object.values(MARKETS)
   .map(m=>`<option value="${m.code}">${m.flag} ${m.label}</option>`).join("");
 
+/* ---------- BASELINE TOGGLES ----------
+   Two independent to-scale references (Credit Card / US Letter); either, both, or
+   neither can be shown. applyMarket() sets the region default (US → Letter, else Card);
+   these buttons then let the reader override. */
+const baselineEl = document.getElementById("baseline");
+function syncBaselineButtons(){
+  baselineEl.querySelectorAll(".fbtn").forEach(btn=>{
+    btn.classList.toggle("active", baselines.has(btn.dataset.baseline));
+  });
+}
+baselineEl.addEventListener("click", e=>{
+  const btn = e.target.closest(".fbtn"); if(!btn) return;
+  const k = btn.dataset.baseline;
+  if(baselines.has(k)) baselines.delete(k); else baselines.add(k);
+  syncBaselineButtons();
+  renderDiagram();
+});
+
 function updateMarketLinks(){
   document.querySelectorAll("a.amazon[data-search]").forEach(a=>{ a.href = amazonURL(a.dataset.search); });
   document.querySelectorAll("a.camel[data-search]").forEach(a=>{
@@ -651,6 +809,10 @@ function applyMarket(code, auto){
   UNIT = unitForMarket(MARKET);
   regionSel.value = MARKET.code;
   regionAuto.textContent = auto ? "· auto-detected" : "";
+  // Region drives the baseline default: US → US Letter, everywhere else → Credit Card.
+  baselines.clear();
+  baselines.add(MARKET.code === "US" ? "letter" : "card");
+  syncBaselineButtons();
   updateMarketLinks();
   updateUnits();
   renderDiagram();
