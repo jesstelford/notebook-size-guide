@@ -161,7 +161,6 @@ hidden. `XX` is the ".com / other" fallback.
 
 ## Possible next steps
 
-- Add a `README.md`.
 - Candidate sizes discussed but deferred (add **only** with verified dimensions):
   Steno (152 × 229), US Letter / Half-Letter / Legal as *entries* (Letter is currently only
   the US scale reference, not a card), other Traveler's-style formats.
