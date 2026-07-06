@@ -10,21 +10,21 @@ region-aware shopping links.
 
 - **Live:** https://jesstelford.github.io/notebook-size-guide/
 - **Repo:** https://github.com/jesstelford/notebook-size-guide
-- **All code is in `public/index.html`** — one self-contained file (HTML + CSS + vanilla JS).
+- **All code is in `docs/index.html`** — one self-contained file (HTML + CSS + vanilla JS).
   No framework, no bundler, no build step.
 
 ## Running & deploying
 
-- **Local:** open `public/index.html` in a browser, or serve statically (`npx serve public`). No install/build.
-- **Deploy:** GitHub Pages / any static host serving the `public/` directory. `public/index.html`
-  is the entry point.
+- **Local:** open `docs/index.html` in a browser, or serve statically (`npx serve docs`). No install/build.
+- **Deploy:** GitHub Pages, `main` / `docs` folder (Settings → Pages → source "Deploy from a
+  branch", folder `/docs`). `docs/index.html` is the entry point.
 - **Runtime deps (CDN, not vendored):** Google Fonts (Space Grotesk, IBM Plex Sans/Mono)
   and one client-side `fetch` to `https://ipwho.is/` for region detection. No other network
   calls, no server, no secrets.
 
 ## Hard constraints (keep these)
 
-- **Single file.** Keep everything in `public/index.html` unless there's a strong reason to split.
+- **Single file.** Keep everything in `docs/index.html` unless there's a strong reason to split.
 - **No browser storage.** Do not use `localStorage` / `sessionStorage` / cookies — state is in-memory only.
 - **No build tooling** unless explicitly requested; it must stay openable as a bare file.
 - Dependency-light and framework-free.
@@ -36,7 +36,7 @@ region-aware shopping links.
   source of truth over tracking it separately — e.g. the filter buttons' selected state is
   derived from the `hidden` set, not stored.
 
-## Layout inside `public/index.html`
+## Layout inside `docs/index.html`
 
 1. `<head>` — meta, fonts, **all CSS**. CSS variables define an "ink-on-paper / drafting
    spec-sheet" theme.
