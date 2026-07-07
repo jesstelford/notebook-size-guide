@@ -923,11 +923,11 @@ function coverBumpTextureCanvas(){
   let seed = 20240607;                                   // deterministic noise
   const rnd = () => { seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed/0x7fffffff; };
   for(let i=0;i<d.length;i+=4){
-    const n = 128 + (rnd()-0.5)*120;
+    const n = 128 + (rnd()-0.5)*180;
     d[i]=d[i+1]=d[i+2]=n; d[i+3]=255;
   }
   ctx.putImageData(img,0,0);
-  ctx.strokeStyle = "rgba(80,80,80,0.6)"; ctx.lineWidth = 1;       // faint cross-weave
+  ctx.strokeStyle = "rgba(60,60,60,0.85)"; ctx.lineWidth = 1;      // cross-weave
   for(let x=0;x<S;x+=4){ ctx.beginPath(); ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,S); ctx.stroke(); }
   for(let y=0;y<S;y+=4){ ctx.beginPath(); ctx.moveTo(0,y+0.5); ctx.lineTo(S,y+0.5); ctx.stroke(); }
   coverBumpCanvas = cv;
@@ -956,6 +956,7 @@ view3d = (function(){
     renderer.render(scene, camera);
     renderOverlay();
   }
+  let _dir=null, _right=null, _look=null;              // lazily created (THREE loads on mount)
   function positionCamera(){
     if(!camera || !target) return;
     const sp = Math.sin(polar), cp = Math.cos(polar);
@@ -965,7 +966,14 @@ view3d = (function(){
       target.z + dist*sp*Math.cos(azimuth)
     );
     camera.up.set(0,1,0);
-    camera.lookAt(target);
+    // Aim slightly right of the orbit pivot so the pile sits left of centre (like the SVG),
+    // leaving the right side for the callouts. Orbit still pivots around the pile.
+    if(!_dir){ _dir = new THREE.Vector3(); _right = new THREE.Vector3(); _look = new THREE.Vector3(); }
+    _dir.subVectors(target, camera.position).normalize();
+    _right.crossVectors(_dir, camera.up).normalize();
+    const viewW = 2*dist*Math.tan((camera.fov*Math.PI/180)/2)*camera.aspect;
+    _look.copy(target).addScaledVector(_right, viewW*0.15);
+    camera.lookAt(_look);
   }
 
   /* --- scene scaffolding (table + three-point lighting + shared materials) --- */
@@ -997,7 +1005,7 @@ view3d = (function(){
     pagesMat = new THREE.MeshStandardMaterial({ color:0xF6F5F0, roughness:0.9, metalness:0.0 });
     coverBumpTex = new THREE.CanvasTexture(coverBumpTextureCanvas());
     coverBumpTex.wrapS = coverBumpTex.wrapT = THREE.RepeatWrapping;
-    coverBumpTex.repeat.set(3,3);
+    coverBumpTex.repeat.set(2,2);
     coverBumpTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
     const tgeo = new THREE.PlaneGeometry(12000, 12000);
@@ -1033,23 +1041,26 @@ view3d = (function(){
          stacked sharing the spine (x=0) and tail (z=0) edges. --- */
   function makeCoverMaterial(hex){
     const m = new THREE.MeshStandardMaterial({ color:new THREE.Color(hex), roughness:0.55, metalness:0.06 });
-    m.bumpMap = coverBumpTex; m.bumpScale = 0.825;      // +50% depth so the weave reads
+    m.bumpMap = coverBumpTex; m.bumpScale = 1.24;       // deep enough that the weave reads
     return m;
   }
-  // A box whose vertical (X/Z) edges are rounded — the cover's footprint corners — while
-  // the flat top/bottom faces stay crisp (so the highlight still catches a clean edge).
-  function roundedBoxGeoXZ(w, hy, d, r){
-    r = Math.max(0, Math.min(r, w/2 - 0.01, d/2 - 0.01));
-    const g = new THREE.BoxGeometry(w, hy, d, 3, 1, 3);
-    if(r <= 0) return g;
-    const pos = g.attributes.position, hx = w/2 - r, hz = d/2 - r;
-    for(let i=0;i<pos.count;i++){
-      const x = pos.getX(i), z = pos.getZ(i);
-      const ix = Math.max(-hx, Math.min(hx, x)), iz = Math.max(-hz, Math.min(hz, z));
-      const dx = x - ix, dz = z - iz, len = Math.hypot(dx, dz);
-      if(len > 1e-6){ const k = r/len; pos.setX(i, ix + dx*k); pos.setZ(i, iz + dz*k); }
-    }
-    g.computeVertexNormals();
+  // A cover slab (thickness along Y) with crisp flat faces and straight edges, rounded only
+  // at the four corners. Built as an extruded rounded rectangle: flat caps + flat straight
+  // walls (sharp X/Y edges) with a smooth-shaded round only where the corners meet.
+  function roundedCoverGeo(w, thick, d, r){
+    r = Math.max(0.2, Math.min(r, w/2 - 0.5, d/2 - 0.5));
+    const sh = new THREE.Shape(), x0=-w/2, x1=w/2, z0=-d/2, z1=d/2;
+    sh.moveTo(x0+r, z0);
+    sh.lineTo(x1-r, z0); sh.quadraticCurveTo(x1, z0, x1, z0+r);
+    sh.lineTo(x1, z1-r); sh.quadraticCurveTo(x1, z1, x1-r, z1);
+    sh.lineTo(x0+r, z1); sh.quadraticCurveTo(x0, z1, x0, z1-r);
+    sh.lineTo(x0, z0+r); sh.quadraticCurveTo(x0, z0, x0+r, z0);
+    const g = new THREE.ExtrudeGeometry(sh, { depth:thick, bevelEnabled:false, curveSegments:5, steps:1 });
+    g.rotateX(-Math.PI/2);                              // shape XY → world XZ; extrude → Y (0..thick)
+    // planar 0..1 UVs over the footprint so the shared bump texture tiles like the box faces
+    const p = g.attributes.position, uv = new Float32Array(p.count*2);
+    for(let i=0;i<p.count;i++){ uv[2*i] = (p.getX(i)+w/2)/w; uv[2*i+1] = (p.getZ(i)+d/2)/d; }
+    g.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
     return g;
   }
   function addBook(s, y0, t){
@@ -1058,15 +1069,15 @@ view3d = (function(){
     const over   = state3d.hard ? 2.0 : 1.2;            // cover overhang / page recess
     const spineT = state3d.hard ? 2.6 : 1.8;
     const pagesT = Math.max(0.4, t - 2*coverT);
-    const r      = Math.min(2.6, s.w*0.06, s.h*0.06);  // rounded cover corners (X/Z)
+    const r      = Math.min(3.5, s.w*0.05, s.h*0.05);  // rounded cover corners
     const add = (geo, mat, cx, cy, cz)=>{
       const m = new THREE.Mesh(geo, mat);
       m.castShadow = true; m.receiveShadow = true;
       m.position.set(cx, y0 + cy, cz);                 // footprint x∈[0,w], z∈[-h,0]; spine x=0, tail z=0
       notebookGroup.add(m);
     };
-    add(roundedBoxGeoXZ(s.w, coverT, s.h, r), cover, s.w/2, coverT/2,      -s.h/2);   // bottom cover
-    add(roundedBoxGeoXZ(s.w, coverT, s.h, r), cover, s.w/2, t - coverT/2,  -s.h/2);   // top cover
+    add(roundedCoverGeo(s.w, coverT, s.h, r), cover, s.w/2, 0,           -s.h/2);   // bottom cover (Y 0..coverT)
+    add(roundedCoverGeo(s.w, coverT, s.h, r), cover, s.w/2, t - coverT,  -s.h/2);   // top cover
     add(new THREE.BoxGeometry(spineT, pagesT, s.h), cover, spineT/2, coverT + pagesT/2, -s.h/2);  // spine
     const px0 = 0.8, px1 = s.w - over, pz0 = -s.h + over, pz1 = -over;                // recessed pages
     add(new THREE.BoxGeometry(px1 - px0, pagesT, pz1 - pz0), pagesMat,
@@ -1106,7 +1117,7 @@ view3d = (function(){
       if(v.z > -1 && v.z < 1) pts.push({ s:a.s, x:(v.x*0.5+0.5)*w, y:(-v.y*0.5+0.5)*h });
     });
     if(!pts.length){ overlay.innerHTML = ""; return; }
-    const LH = 19, colX = Math.max(160, w - 244);        // fixed right-hand gutter, clear of the pile
+    const LH = 19, colX = Math.max(180, w - 214);        // fixed right-hand gutter, clear of the pile
     // Stack callouts top-to-bottom with a push-down anti-overlap pass (as in the 2D view)…
     pts.sort((a,b)=>a.y - b.y);
     const rows = [];
