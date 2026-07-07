@@ -41,7 +41,7 @@
       linear-gradient(90deg, transparent 30px, rgba(198,91,88,.14) 30px, rgba(198,91,88,.14) 31px, transparent 31px),
       repeating-linear-gradient(0deg, transparent, transparent 24px, rgba(27,36,48,.045) 24px, rgba(27,36,48,.045) 25px);
   }
-  .diagram{width:100%;height:auto;display:block;overflow:visible;}
+  .diagram{width:100%;height:auto;max-height:75vh;display:block;overflow:visible;}
   .diagram text{font-family:"IBM Plex Mono",monospace;}
 
   /* 3D view: toggle button (top-right of stage), loading overlay, canvas, controls */
@@ -938,6 +938,7 @@ view3d = (function(){
   let THREE=null, renderer=null, scene=null, camera=null, canvas=null;
   let notebookGroup=null, labelAnchors=[], overlay=null, table=null, pagesMat=null, coverBumpTex=null;
   let target=null, rafId=0, needsRender=false;
+  let gutterFrac=0.4;                                   // right-hand share reserved for labels
   let azimuth=Math.PI*0.18, polar=Math.PI*0.36, dist=600;
   let dragging=false, lastX=0, lastY=0;
   const ctrl = { active:false };
@@ -972,7 +973,7 @@ view3d = (function(){
     _dir.subVectors(target, camera.position).normalize();
     _right.crossVectors(_dir, camera.up).normalize();
     const viewW = 2*dist*Math.tan((camera.fov*Math.PI/180)/2)*camera.aspect;
-    _look.copy(target).addScaledVector(_right, viewW*0.15);
+    _look.copy(target).addScaledVector(_right, viewW*gutterFrac*0.5);   // centre pile in the left area
     camera.lookAt(_look);
   }
 
@@ -982,8 +983,10 @@ view3d = (function(){
     const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
     return Math.max(280, stageEl.clientWidth - padX);
   }
+  // Canvas height: 60% of width, but never taller than 75% of the viewport height.
+  const canvasHeight = w => Math.min(Math.max(320, Math.round(w*0.6)), Math.round(window.innerHeight*0.75));
   function buildScene(){
-    const w = stageContentWidth(), h = Math.max(320, Math.round(w*0.6));
+    const w = stageContentWidth(), h = canvasHeight(w);
     renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
     renderer.setSize(w, h);
@@ -1106,34 +1109,59 @@ view3d = (function(){
     overlay.style.width  = canvas.clientWidth + "px";
     overlay.style.height = canvas.clientHeight + "px";
   }
+  // The 2D diagram draws its callouts at font-size 7 in a viewBox that scales to fit the
+  // stage. Replicate that final on-screen pixel size here so 3D labels match the 2D exactly
+  // (and shrink on narrow screens instead of overflowing). `labelCal` is calibrated against
+  // the live 2D SVG at mount so the two stay pixel-identical even when the 2D is height-capped.
+  let labelCal = 1;
+  function rawLabelPx(){
+    const visible = sizes.filter(s=>!hidden.has(s.id));
+    if(!visible.length || !canvas) return 12;
+    const FS = 7;
+    const refW = [...baselines].map(k=>BASELINES[k].w);
+    const Wmax = Math.max(...visible.map(s=>s.w), ...refW, 1);
+    let maxChars = 0;
+    visible.forEach(s=>{
+      const chars = `${s.name} · ${shortTag(s.tag)}`.length + fmtDim(s.w, s.h, UNIT, s.approx).length + 2;
+      maxChars = Math.max(maxChars, chars);
+    });
+    const labelX = Wmax + 12, vbW = (labelX + maxChars*FS*0.56 + 4) - (-4);   // matches renderDiagram
+    return FS * (canvas.clientWidth / vbW);
+  }
+  const label2DFontPx = () => Math.max(8, Math.min(22, rawLabelPx() * labelCal));
   function renderOverlay(){
     if(!overlay || !camera) return;
     syncOverlay();                                       // keep aligned to the canvas (layout can shift)
     const w = canvas.clientWidth, h = canvas.clientHeight;
     overlay.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    const v = new THREE.Vector3(), pts = [];
+    const v = new THREE.Vector3(), rows = [];
+    let maxChars = 0;
     labelAnchors.forEach(a=>{
       v.copy(a.p).project(camera);
-      if(v.z > -1 && v.z < 1) pts.push({ s:a.s, x:(v.x*0.5+0.5)*w, y:(-v.y*0.5+0.5)*h });
+      if(v.z <= -1 || v.z >= 1) return;
+      const name = `${a.s.name} · ${shortTag(a.s.tag)}`, dims = fmtDim(a.s.w, a.s.h, UNIT, a.s.approx);
+      maxChars = Math.max(maxChars, name.length + 3 + dims.length);
+      rows.push({ s:a.s, name, dims, x:(v.x*0.5+0.5)*w, y:(-v.y*0.5+0.5)*h });
     });
-    if(!pts.length){ overlay.innerHTML = ""; return; }
-    const LH = 19, colX = Math.max(180, w - 214);        // fixed right-hand gutter, clear of the pile
-    // Stack callouts top-to-bottom with a push-down anti-overlap pass (as in the 2D view)…
-    pts.sort((a,b)=>a.y - b.y);
-    const rows = [];
+    if(!rows.length){ overlay.innerHTML = ""; gutterFrac = 0.28; return; }
+    const fontPx = label2DFontPx();
+    const charW = fontPx * 0.62;                          // IBM Plex Mono advance ≈ 0.62em
+    const gutterW = Math.min(w*0.52, maxChars*charW + 14);
+    gutterFrac = gutterW / w;
+    const colX = w - gutterW + 2;
+    const LH = fontPx * 1.5;
+    // push-down anti-overlap pass (as in the 2D view), then shift up if it runs off the bottom
+    rows.sort((a,b)=>a.y - b.y);
     let lastY = -1e9;
-    pts.forEach(p=>{ const ly = Math.max(p.y, lastY + LH); lastY = ly; rows.push({ p, ly }); });
-    // …then shift the whole column up if it runs past the bottom edge.
+    rows.forEach(r=>{ r.ly = Math.max(r.y, lastY + LH); lastY = r.ly; });
     const overflow = lastY - (h - 6);
     if(overflow > 0){ const shift = Math.min(overflow, rows[0].ly - 6); rows.forEach(r=>r.ly -= shift); }
+    const fs = fontPx.toFixed(1);
     let out = "";
-    rows.forEach(({p, ly})=>{
-      const name = `${p.s.name} · ${shortTag(p.s.tag)}`;
-      const dims = fmtDim(p.s.w, p.s.h, UNIT, p.s.approx);
-      // single line, styled exactly like the 2D diagram's callouts
-      out += `<line x1="${p.x.toFixed(1)}" y1="${p.y.toFixed(1)}" x2="${(colX-6).toFixed(1)}" y2="${ly.toFixed(1)}" stroke="${p.s.color}" stroke-width="1" stroke-opacity="0.6"/>`
-           + `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2" fill="${p.s.color}"/>`
-           + `<text x="${colX}" y="${(ly+3.5).toFixed(1)}" font-size="10.5"><tspan fill="${p.s.color}" font-weight="600">${esc(name)}</tspan><tspan fill="#5A6270">   ${esc(dims)}</tspan></text>`;
+    rows.forEach(({s, name, dims, x, y, ly})=>{
+      out += `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(colX-6).toFixed(1)}" y2="${ly.toFixed(1)}" stroke="${s.color}" stroke-width="1" stroke-opacity="0.6"/>`
+           + `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="${s.color}"/>`
+           + `<text x="${colX.toFixed(1)}" y="${(ly + fontPx*0.34).toFixed(1)}" font-size="${fs}"><tspan fill="${s.color}" font-weight="600">${esc(name)}</tspan><tspan fill="#5A6270">   ${esc(dims)}</tspan></text>`;
     });
     overlay.innerHTML = out;
   }
@@ -1147,7 +1175,8 @@ view3d = (function(){
     const size = new THREE.Vector3(); box.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
     const fov = camera.fov*Math.PI/180;
-    dist = (maxDim/2)/Math.tan(fov/2)*1.4 + maxDim*0.35;
+    // shrink so the pile fits the left (1 - gutterFrac) of the frame, leaving room for labels
+    dist = (maxDim/2)/Math.tan(fov/2)*1.4 / Math.max(0.5, 1 - gutterFrac) + maxDim*0.3;
     requestRender();
   }
 
@@ -1201,9 +1230,9 @@ view3d = (function(){
   const onWheel = e=>{ e.preventDefault(); zoomTo(1 + Math.sign(e.deltaY)*0.08); };
   const onResize = ()=>{
     if(!renderer) return;
-    const w = stageContentWidth(), h = Math.max(320, Math.round(w*0.6));
+    const w = stageContentWidth(), h = canvasHeight(w);
     renderer.setSize(w, h); camera.aspect = w/h; camera.updateProjectionMatrix();
-    syncOverlay();
+    frameScene(false); syncOverlay();
     requestRender();
   };
   function attachListeners(){
@@ -1235,6 +1264,10 @@ view3d = (function(){
     try{
       THREE = await loadThree();
       buildScene();
+      // Calibrate label size to the live 2D diagram (accounts for its 75vh height cap).
+      const svgRect = svg.getBoundingClientRect(), vbw = (svg.viewBox.baseVal.width || 1);
+      const raw = rawLabelPx();
+      labelCal = raw > 0 ? (7 * svgRect.width / vbw) / raw : 1;
       buildNotebooks();
       frameScene(true);
       attachListeners();
