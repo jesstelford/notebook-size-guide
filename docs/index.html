@@ -4,13 +4,34 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Notebook Sizes — To Scale</title>
+<meta name="description" content="Interactive, to-scale comparison of notebook and paper sizes — ISO and JIS A/B series plus brand formats like Traveler's, Field Notes, Hobonichi and Moleskine — with a 3D stacked view, credit-card and US Letter references, and region-aware shopping links." />
+<link rel="canonical" href="https://jesstelford.github.io/notebook-size-guide/" />
+<meta name="theme-color" content="#F8F7F3" />
+<meta property="og:title" content="Notebook Sizes — Drawn to Scale" />
+<meta property="og:description" content="Compare 22 notebook and paper sizes to scale — ISO, JIS and brand formats — in 2D or as a 3D pile of notebooks, with credit-card and US Letter references." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://jesstelford.github.io/notebook-size-guide/" />
+<meta property="og:site_name" content="Notebook Size Guide" />
+<meta property="og:image" content="https://jesstelford.github.io/notebook-size-guide/social.png" />
+<meta property="og:image:width" content="2240" />
+<meta property="og:image:height" content="1186" />
+<meta property="og:image:alt" content="3D rendering of notebooks stacked to scale on a US Letter sheet, with size callouts." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Notebook Sizes — Drawn to Scale" />
+<meta name="twitter:description" content="Compare 22 notebook and paper sizes to scale — ISO, JIS and brand formats — in 2D or as a 3D pile of notebooks." />
+<meta name="twitter:image" content="https://jesstelford.github.io/notebook-size-guide/social.png" />
+<meta name="twitter:image:alt" content="3D rendering of notebooks stacked to scale on a US Letter sheet, with size callouts." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet" />
 <style>
   :root{
     --paper:#F8F7F3; --panel:#FFFFFF; --ink:#1B2430;
-    --ink-soft:#5A6270; --ink-faint:#9AA0AA; --rule:#E7E4DC; --margin:#C65B58;
+    --ink-soft:#5A6270; --ink-faint:#6A7078; --rule:#E7E4DC; --margin:#C65B58;
+  }
+  .sr-only{
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+    overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
   }
   *{box-sizing:border-box;}
   html{-webkit-text-size-adjust:100%;}
@@ -65,9 +86,12 @@
   .nb-overlay{position:absolute;pointer-events:none;z-index:1;overflow:visible;}
   .nb-overlay text{font-family:"IBM Plex Mono",monospace;}
   .nb-controls{
-    display:flex;align-items:center;gap:8px;
+    position:absolute;top:14px;left:14px;z-index:2;
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
     font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
+    background:rgba(255,255,255,.72);border-radius:22px;padding:3px 8px 3px 12px;
   }
+  .nb-controls[hidden]{display:none;}
   .nb-controls label{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--ink-faint);}
   .nb-controls select{
     font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink);
@@ -78,24 +102,21 @@
     display:flex;justify-content:space-between;align-items:center;gap:12px;
     margin-top:6px;flex-wrap:wrap;
   }
-  .region{
-    display:flex;align-items:center;gap:8px;
-    font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
-  }
-  .region label{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--ink-faint);}
+  /* Region selector lives in the eyebrow row, top-right (after the ruled line). */
+  .region{display:flex;align-items:center;order:1;margin-left:12px;}
   .region select{
     font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink);
+    letter-spacing:normal;text-transform:none;
     background:var(--panel);border:1px solid var(--rule);border-radius:20px;
     padding:5px 10px;cursor:pointer;
   }
   .region select:hover{border-color:var(--ink-soft);}
-  .region-auto{font-size:10px;color:var(--ink-faint);}
   .foot-right{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
   .baseline{
     display:flex;align-items:center;gap:6px;
     font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
   }
-  .baseline label{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--ink-faint);}
+  .baseline label,.baseline span{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--ink-faint);}
   .filters{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
   .fbtn{
     font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
@@ -106,7 +127,7 @@
   .fbtn.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
 
   .section-label{
-    font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.22em;
+    font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:500;letter-spacing:.22em;
     text-transform:uppercase;color:var(--ink-soft);margin:26px 0 14px;
     display:flex;align-items:center;gap:12px;
   }
@@ -120,7 +141,7 @@
   .card.off{opacity:.5;}
   .card.off .card-head .name{text-decoration:line-through;text-decoration-color:var(--ink-faint);}
   .card-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-  .toggle{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none;}
+  .toggle{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none;padding:4px;margin:-4px;}
   .toggle input{position:absolute;opacity:0;width:0;height:0;}
   .box{
     width:18px;height:18px;border-radius:5px;border:2px solid var(--c);
@@ -133,7 +154,7 @@
   .card h3{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:20px;margin:0;letter-spacing:-.01em;line-height:1.1;}
   .tag{
     font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
-    color:var(--c);border:1px solid var(--c);border-radius:20px;padding:2px 8px;display:inline-block;margin:0 0 0 auto;opacity:.9;white-space:nowrap;
+    color:var(--c);border:1px solid var(--c);border-radius:20px;padding:2px 8px;display:inline-block;margin:0 0 0 auto;white-space:nowrap;
   }
   .measure{font-family:"IBM Plex Mono",monospace;font-size:13.5px;line-height:1.65;margin:12px 0 6px;}
   .measure .dim-primary{font-weight:600;} .measure .dim-mm{color:var(--ink-faint);font-size:12px;}
@@ -144,6 +165,10 @@
   summary{
     font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.04em;
     color:var(--ink);cursor:pointer;list-style:none;display:flex;align-items:center;gap:7px;
+    padding:6px 0;
+  }
+  .fbtn:focus-visible,.view3d-btn:focus-visible,select:focus-visible,summary:focus-visible,.nb-canvas:focus-visible{
+    outline:2px solid var(--ink);outline-offset:2px;
   }
   summary::-webkit-details-marker{display:none;}
   summary .chev{transition:transform .18s;color:var(--c);}
@@ -177,7 +202,7 @@
 
   .notes{margin-top:34px;padding-top:22px;border-top:1px solid var(--rule);
     display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px;}
-  .note h4{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;margin:0 0 8px;}
+  .note h3{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;margin:0 0 8px;}
   .note p{margin:0;font-size:12.5px;color:var(--ink-soft);line-height:1.5;}
   .note a{color:#33417A;}
 
@@ -188,17 +213,30 @@
 <div class="wrap">
 
   <header>
-    <div class="eyebrow">Stationery&nbsp;·&nbsp;Size Reference</div>
+    <div class="eyebrow">Stationery&nbsp;·&nbsp;Size Reference<div class="region">
+      <select id="regionSel" aria-label="Marketplace region for shopping links"></select>
+    </div></div>
     <h1>Notebook sizes,<br><em>drawn to scale.</em></h1>
   </header>
 
   <div class="stage">
     <svg id="diagram" class="diagram" role="img" aria-label="Notebook sizes overlaid to scale with labelled callouts."></svg>
-    <button class="view3d-btn" id="view3dBtn" type="button" hidden aria-label="Toggle 3D notebook view">3D</button>
+    <button class="view3d-btn" id="view3dBtn" type="button" hidden aria-label="Switch to 3D view" aria-pressed="false">3D</button>
+    <div class="nb-controls" id="nbControls" hidden>
+      <span>Cover</span>
+      <button class="fbtn active" id="coverBtn" type="button" aria-pressed="true">Hardcover</button>
+      <label for="pagesSel">Pages</label>
+      <select id="pagesSel">
+        <option value="50">50</option>
+        <option value="120" selected>120</option>
+        <option value="280">280</option>
+      </select>
+    </div>
+    <span class="sr-only" role="status" id="srStatus"></span>
   </div>
   <div class="stage-foot">
-    <div class="filters" id="filters">
-      <button class="fbtn active" data-group="all" type="button">All</button>
+    <div class="filters" id="filters" role="group" aria-label="Show size groups">
+      <button class="fbtn active" data-group="all" type="button" aria-pressed="true">All</button>
       <button class="fbtn" data-group="a4" type="button">A4</button>
       <button class="fbtn" data-group="a5" type="button">A5</button>
       <button class="fbtn" data-group="b5" type="button">B5</button>
@@ -209,51 +247,36 @@
       <button class="fbtn" data-group="ftr" type="button">Field/Traveller/Reporter/Weeks</button>
     </div>
     <div class="foot-right">
-      <div class="region">
-        <label for="regionSel">Region</label>
-        <select id="regionSel" aria-label="Marketplace region for shopping links"></select>
-        <span class="region-auto" id="regionAuto"></span>
-      </div>
-      <div class="baseline" id="baseline">
-        <label>Baseline</label>
-        <button class="fbtn" data-baseline="card" type="button">Credit Card</button>
-        <button class="fbtn" data-baseline="letter" type="button">US Letter</button>
-      </div>
-      <div class="nb-controls" id="nbControls" hidden>
-        <label>Cover</label>
-        <button class="fbtn active" id="coverBtn" type="button">Hardcover</button>
-        <label>Pages</label>
-        <select id="pagesSel" aria-label="Notebook page count">
-          <option value="50">50</option>
-          <option value="120" selected>120</option>
-          <option value="280">280</option>
-        </select>
+      <div class="baseline" id="baseline" role="group" aria-labelledby="baselineLbl">
+        <span id="baselineLbl">Baseline</span>
+        <button class="fbtn" data-baseline="card" type="button" aria-pressed="false">Credit Card</button>
+        <button class="fbtn" data-baseline="letter" type="button" aria-pressed="false">US Letter</button>
       </div>
     </div>
   </div>
 
-  <div class="section-label">Sizes &amp; variants</div>
+  <h2 class="section-label">Sizes &amp; variants</h2>
   <div class="cards" id="cards"></div>
 
   <div class="notes">
     <div class="note">
-      <h4>JIS vs ISO B-sizes</h4>
+      <h3>JIS vs ISO B-sizes</h3>
       <p>The B-series exists in two standards. Japanese makers (Kokuyo, Midori, Apica) use <strong>JIS</strong> — a touch taller and narrower. European makers (Leuchtturm1917, Rhodia) use <strong>ISO</strong>. A-sizes (A4, A5, A6) are identical worldwide, so they get a single entry each.</p>
     </div>
     <div class="note">
-      <h4>Scale reference</h4>
+      <h3>Scale reference</h3>
       <p>Toggle a to-scale object you already know for size under <strong>Baseline</strong>: a <strong>credit card</strong> (85.6 × 54 mm) and/or a sheet of <strong>US Letter</strong> (8.5 × 11 in). Your region picks the default — US Letter in the United States, credit card everywhere else — and you can show either, both, or neither.</p>
     </div>
     <div class="note">
-      <h4>On "Slim" sizes</h4>
+      <h3>On "Slim" sizes</h3>
       <p>Slim is not a formal standard — it's a maker's narrower cut. B6 Slim is well-established but differs by brand (Midori ≈110×176, Stalogy 100×180). B5 Slim is rare and its width drifts, so treat that figure as approximate.</p>
     </div>
     <div class="note">
-      <h4>Shopping links</h4>
+      <h3>Shopping links</h3>
       <p>Specs (brand, size, gsm, pages) are verified. Links use your detected region (change it above): <strong>Amazon</strong> for the live listing, price and star rating, and <strong>Camel</strong> for price history where that marketplace is supported (Camel covers the US, UK, Canada, Germany, France, Italy, Spain, Japan and Australia; the Camel link is hidden elsewhere).</p>
     </div>
     <div class="note">
-      <h4>Brand sizes ≠ pure ISO</h4>
+      <h3>Brand sizes ≠ pure ISO</h3>
       <p>Several products use a house size close to — but not exactly — the standard: Leuchtturm's Pocket runs 90×150 (under A6), its B6+ is 125×190 (taller than B6), its Composition is 178×254 (between ISO and JIS B5). Real dimensions are shown per product.</p>
     </div>
   </div>
@@ -365,6 +388,31 @@ const sizes = [
     ]
   },
   {
+    id:"a6slim_muji", name:"A6 Slim", tag:"Muji · non-standard", color:"#5F7A34",
+    w:92, h:147, mm:"92 × 147 mm", in:"3.62 × 5.79 in", alt:"Muji's narrow A6 cut — 13 mm narrower than A6",
+    use:"Jacket-pocket capture with near-A6 height — slips where full A6 won't.",
+    none:"“A6 Slim” is a maker's narrow cut, not a standard — roughly A6 height but ~11–13 mm narrower. It sits very close to Leuchtturm's Pocket (90×150), Moleskine Pocket (90×140) and Traveler's Passport (90×125); what sets it apart is keeping (near-)A6 <b>height</b>.",
+    products:[
+      {brand:"Muji", model:"Slim Notebook A6 — Plain",
+       size:"A6 Slim · 92×147", specs:[["cover","Softcover"],["ruling","Plain"],["binding","Thread"]],
+       search:"Muji slim notebook A6"}
+    ]
+  },
+  {
+    id:"a6slim_trc", name:"A6 Slim", tag:"Traveler's · non-standard", color:"#7A3B4F", approx:true,
+    w:94, h:152, mm:"≈94 × 152 mm", in:"≈3.70 × 5.98 in", alt:"Traveler's Company spiral-ring cut — quoted 6 × 3.7 in",
+    use:"The spiral-ring notebook that popularised the “A6 Slim” name.",
+    none:"Traveler's Company quotes the size in inches (6″ × 3.7″ ≈ <b>152 × 94 mm</b>) for the whole spiral notebook; the paper trim inside is marginally smaller, so treat the figure as approximate.",
+    products:[
+      {brand:"Traveler's Company", model:"Spiral Ring Notebook A6 Slim — MD Paper White",
+       size:"A6 Slim · ~94×152", specs:[["paper","MD"],["pages","200"],["cover","Resin + spiral"],["ruling","Blank"]],
+       search:"Travelers Company spiral ring notebook A6 slim"},
+      {brand:"Traveler's Company", model:"Spiral Ring Notebook A6 Slim — Kraft",
+       size:"A6 Slim · ~94×152", specs:[["paper","Kraft"],["pages","200"],["cover","Resin + spiral"],["ruling","Blank"]],
+       search:"Travelers Company spiral ring notebook A6 slim kraft"}
+    ]
+  },
+  {
     id:"a5", name:"A5", tag:"ISO · A-series", color:"#2F6BB0",
     w:148, h:210, mm:"148 × 210 mm", in:"5.83 × 8.27 in", alt:"the all-rounder — identical worldwide",
     use:"Journals, planners, bullet journals. The most popular size globally.",
@@ -385,7 +433,7 @@ const sizes = [
     ]
   },
   {
-    id:"b6iso", name:"B6", tag:"ISO", color:"#E08A1E",
+    id:"b6iso", name:"B6", tag:"ISO", color:"#9C6210",
     w:125, h:176, mm:"125 × 176 mm", in:"4.92 × 6.93 in", alt:"European B6 (Rhodia, Leuchtturm)",
     use:"Everyday carry with real writing room; slips into most bags.",
     products:[
@@ -407,7 +455,7 @@ const sizes = [
     ]
   },
   {
-    id:"b6slim_midori", name:"B6 Slim", tag:"Midori · non-standard", color:"#3F8F4F",
+    id:"b6slim_midori", name:"B6 Slim", tag:"Midori · non-standard", color:"#337A41",
     w:110, h:176, mm:"110 × 176 mm", in:"4.33 × 6.93 in", alt:"Midori / Nanami / Galen cut",
     use:"Tall and pocketable — the fountain-pen journaller's favourite.",
     none:"B6 Slim is a softcover, staple-bound niche — no hardcover here, and rulings are grid / lined / blank rather than dotted. Midori's cream MD paper is the pick fountain-pen users reach for.",
@@ -480,7 +528,7 @@ const sizes = [
     ]
   },
   {
-    id:"tn_regular", name:"Traveler's", tag:"Regular · non-standard", color:"#1591A8",
+    id:"tn_regular", name:"Traveler's", tag:"Regular · non-standard", color:"#0F7288",
     w:110, h:220, mm:"110 × 220 mm", in:"4.33 × 8.66 in", alt:"Midori TN — tall leather-cover format",
     use:"Tall, slim carry for travel journaling; swap refills in a leather cover.",
     none:"A cover-based system, not a paper standard: a leather cover holds thin stitched refills you swap out. Grid and dot refills exist alongside blank / lined.",
@@ -494,7 +542,7 @@ const sizes = [
     ]
   },
   {
-    id:"tn_passport", name:"Traveler's", tag:"Passport · non-standard", color:"#C89B2C",
+    id:"tn_passport", name:"Traveler's", tag:"Passport · non-standard", color:"#8F6C14",
     w:90, h:125, mm:"90 × 125 mm", in:"3.54 × 4.92 in", alt:"Midori TN — passport-sized cover format",
     use:"Passport-sized carry — tickets, stamps and short notes on trips.",
     none:"The smaller Traveler's format — same leather-cover-plus-refill system as the Regular, near passport dimensions (close to B7).",
@@ -522,7 +570,7 @@ const sizes = [
     ]
   },
   {
-    id:"moleskine_large", name:"Moleskine Large", tag:"brand · non-standard", color:"#4E9A8F",
+    id:"moleskine_large", name:"Moleskine Large", tag:"brand · non-standard", color:"#337A70",
     w:130, h:210, mm:"130 × 210 mm", in:"5.12 × 8.27 in", alt:"Moleskine “Large” — A5 height, 18 mm narrower",
     use:"A5 alternative for journalling — the same height as A5 but a slimmer, taller-feeling page.",
     none:"Marketed as “A5-ish”, but it isn't A5: Moleskine's Large is <b>130 × 210 mm</b> — the same height as A5 (210) yet 18 mm narrower (A5 is 148). The whole Large line shares this trim (Classic, Cahier, Volant). The fountain-pen “<b>A5 Slim</b>” Tomoe-River notebooks (Sterling Ink / Seven Seas) use the same 130 × 210 footprint.",
@@ -642,7 +690,7 @@ function renderDiagram(){
   const visible = sizes.filter(s=>!hidden.has(s.id));
   if(visible.length === 0){
     svg.setAttribute("viewBox","0 0 200 60");
-    svg.innerHTML = `<text x="100" y="34" text-anchor="middle" font-size="10" fill="#9AA0AA">Tick a size to show it here</text>`;
+    svg.innerHTML = `<text x="100" y="34" text-anchor="middle" font-size="10" fill="#6A7078">Tick a size to show it here</text>`;
     return;
   }
 
@@ -703,7 +751,7 @@ function renderDiagram(){
 /* ---------- CARDS ---------- */
 const check = `<svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.3 2.3 4.7-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const chev  = `<svg class="chev" width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M2.5 1l4 3.5-4 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-const ext   = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M4 2h6v6M10 2L4.5 7.5M8 8v2H2V4h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const ext   = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true" focusable="false"><path d="M4 2h6v6M10 2L4.5 7.5M8 8v2H2V4h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 function prodHTML(p){
   const chips = p.specs.map(([k,v])=>`<span class="chip"><b>${esc(k)}</b> ${esc(v)}</span>`).join("");
@@ -714,8 +762,8 @@ function prodHTML(p){
     <div class="specs">${chips}</div>
     ${p.note?`<div class="none" style="margin:0 0 9px">${p.note}</div>`:""}
     <div class="live">
-      <a class="camel" data-search="${esc(p.search)}" href="${camel||"#"}" target="_blank" rel="noopener"${camel?"":' style="display:none"'}>Price history · Camel ${ext}</a>
-      <a class="amazon" data-search="${esc(p.search)}" href="${amazonURL(p.search)}" target="_blank" rel="noopener">★ &amp; buy · Amazon ${ext}</a>
+      <a class="camel" data-search="${esc(p.search)}" href="${camel||"#"}" target="_blank" rel="noopener"${camel?"":' style="display:none"'} aria-label="Price history for ${esc(p.brand)} ${esc(p.model)} on CamelCamelCamel (opens in new tab)">Price history · Camel ${ext}</a>
+      <a class="amazon" data-search="${esc(p.search)}" href="${amazonURL(p.search)}" target="_blank" rel="noopener" aria-label="Buy ${esc(p.brand)} ${esc(p.model)} on Amazon (opens in new tab)">★ &amp; buy · Amazon ${ext}</a>
     </div>
   </div>`;
 }
@@ -728,7 +776,7 @@ function cardHTML(s){
   return `<div class="card" id="card-${s.id}" style="--c:${s.color}">
     <div class="card-head">
       <label class="toggle" title="Show / hide in diagram">
-        <input type="checkbox" checked data-id="${s.id}">
+        <input type="checkbox" checked data-id="${s.id}" aria-label="Show ${esc(s.name)} (${esc(shortTag(s.tag))}) in diagram">
         <span class="box">${check}</span>
       </label>
       <h3 class="name">${esc(s.name)}</h3>
@@ -763,7 +811,7 @@ const GROUPS = {
   b5:  ["b5jis","b5iso","b5slim"],
   b6:  ["b6jis","b6iso","b6slim_midori","b6slim_stalogy"],
   b7:  ["b7jis","b7iso"],
-  a6:  ["a6"],
+  a6:  ["a6","a6slim_muji","a6slim_trc"],
   a7:  ["a7"],
   ftr: ["fieldnotes","tn_regular","tn_passport","reporters","hobonichi_weeks"]
 };
@@ -783,6 +831,7 @@ function refreshFilters(){
       ? allVisible                                          // All ⇔ nothing hidden
       : !allVisible && GROUPS[g].every(id=>!hidden.has(id)); // group ⇔ fully visible (and not All mode)
     btn.classList.toggle("active", active);
+    btn.setAttribute("aria-pressed", active);
   });
 }
 
@@ -821,11 +870,23 @@ refreshFilters();
 
 /* ---------- REGION WIRING ---------- */
 const regionSel  = document.getElementById("regionSel");
-const regionAuto = document.getElementById("regionAuto");
 let userChangedRegion = false;
 
 regionSel.innerHTML = Object.values(MARKETS)
   .map(m=>`<option value="${m.code}">${m.flag} ${m.label}</option>`).join("");
+
+// Closed, the select shows a compact "flag + country code"; open, the list shows full
+// names. Only the selected option's text is swapped (the closed control renders it),
+// and it's restored to the full name while the list is open.
+function syncRegionDisplay(short){
+  [...regionSel.options].forEach(o=>{
+    const m = MARKETS[o.value];
+    o.textContent = (short && o.value === regionSel.value) ? `${m.flag} ${m.code}` : `${m.flag} ${m.label}`;
+  });
+}
+regionSel.addEventListener("focus", ()=>syncRegionDisplay(false));
+regionSel.addEventListener("pointerdown", ()=>syncRegionDisplay(false));   // re-open while focused
+regionSel.addEventListener("blur",  ()=>syncRegionDisplay(true));
 
 /* ---------- BASELINE TOGGLES ----------
    Two independent to-scale references (Credit Card / US Letter); either, both, or
@@ -834,7 +895,9 @@ regionSel.innerHTML = Object.values(MARKETS)
 const baselineEl = document.getElementById("baseline");
 function syncBaselineButtons(){
   baselineEl.querySelectorAll(".fbtn").forEach(btn=>{
-    btn.classList.toggle("active", baselines.has(btn.dataset.baseline));
+    const on = baselines.has(btn.dataset.baseline);
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-pressed", on);
   });
 }
 baselineEl.addEventListener("click", e=>{
@@ -856,7 +919,8 @@ function applyMarket(code, auto){
   MARKET = MARKETS[code] || MARKETS.XX;
   UNIT = unitForMarket(MARKET);
   regionSel.value = MARKET.code;
-  regionAuto.textContent = auto ? "· auto-detected" : "";
+  syncRegionDisplay(true);
+  regionSel.title = auto ? "Region · auto-detected" : "Region";
   // Region drives the baseline default: US → US Letter, everywhere else → Credit Card.
   baselines.clear();
   baselines.add(MARKET.code === "US" ? "letter" : "card");
@@ -886,7 +950,7 @@ const view3dBtn  = document.getElementById("view3dBtn");
 const nbControls = document.getElementById("nbControls");
 const coverBtn   = document.getElementById("coverBtn");
 const pagesSel   = document.getElementById("pagesSel");
-const baselineWrap = document.getElementById("baseline");
+const srStatus   = document.getElementById("srStatus");
 
 // Global (all-notebook) cover + page controls, shown only in 3D mode.
 const state3d = { hard:true, pages:120 };
@@ -957,7 +1021,16 @@ view3d = (function(){
     renderer.render(scene, camera);
     renderOverlay();
   }
-  let _dir=null, _right=null, _look=null;              // lazily created (THREE loads on mount)
+  // The pile sits left of centre (like the SVG) by rendering the RIGHT sub-view of a
+  // virtually wider frame via setViewOffset — a constant pixel shift. The camera always
+  // aims straight at `target`, so the orbit pivot is visually fixed. (Aiming at an offset
+  // look-point instead made the pivot drift right/down as the polar angle changed.)
+  // setViewOffset owns camera.aspect + updateProjectionMatrix; never set aspect manually.
+  function applyViewOffset(){
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const G = Math.round(w * gutterFrac);
+    camera.setViewOffset(w + G, h, G, 0, w, h);
+  }
   function positionCamera(){
     if(!camera || !target) return;
     const sp = Math.sin(polar), cp = Math.cos(polar);
@@ -967,14 +1040,8 @@ view3d = (function(){
       target.z + dist*sp*Math.cos(azimuth)
     );
     camera.up.set(0,1,0);
-    // Aim slightly right of the orbit pivot so the pile sits left of centre (like the SVG),
-    // leaving the right side for the callouts. Orbit still pivots around the pile.
-    if(!_dir){ _dir = new THREE.Vector3(); _right = new THREE.Vector3(); _look = new THREE.Vector3(); }
-    _dir.subVectors(target, camera.position).normalize();
-    _right.crossVectors(_dir, camera.up).normalize();
-    const viewW = 2*dist*Math.tan((camera.fov*Math.PI/180)/2)*camera.aspect;
-    _look.copy(target).addScaledVector(_right, viewW*gutterFrac*0.5);   // centre pile in the left area
-    camera.lookAt(_look);
+    camera.lookAt(target);
+    applyViewOffset();                                  // absorbs gutterFrac updates each frame
   }
 
   /* --- scene scaffolding (table + three-point lighting + shared materials) --- */
@@ -995,9 +1062,13 @@ view3d = (function(){
     if("outputColorSpace" in renderer) renderer.outputColorSpace = THREE.SRGBColorSpace;
     canvas = renderer.domElement;
     canvas.className = "nb-canvas";
+    canvas.setAttribute("tabindex", "0");
+    canvas.setAttribute("role", "img");
+    canvas.setAttribute("aria-label", "3D view of the visible notebook sizes stacked to scale. Arrow keys rotate, plus and minus zoom.");
     stageEl.insertBefore(canvas, view3dBtn);           // sits under the (absolute) button
     overlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     overlay.setAttribute("class", "nb-overlay");
+    overlay.setAttribute("aria-hidden", "true");
     stageEl.insertBefore(overlay, view3dBtn);
     syncOverlay();
 
@@ -1085,17 +1156,47 @@ view3d = (function(){
     const px0 = 0.8, px1 = s.w - over, pz0 = -s.h + over, pz1 = -over;                // recessed pages
     add(new THREE.BoxGeometry(px1 - px0, pagesT, pz1 - pz0), pagesMat,
         (px0+px1)/2, coverT + pagesT/2, (pz0+pz1)/2);
-    labelAnchors.push({ s, p:new THREE.Vector3(s.w, y0 + t, -s.h) });   // head + fore-edge top corner
+    labelAnchors.push({ name:`${s.name} · ${shortTag(s.tag)}`, dims:fmtDim(s.w, s.h, UNIT, s.approx),
+                        color:s.color, p:new THREE.Vector3(s.w, y0 + t, -s.h) });   // head + fore-edge top corner
+  }
+  // Active baseline references as flat non-book slabs of ~credit-card thickness, stacked
+  // with the books: the card gets its real rounded corners, the Letter sheet stays square.
+  const REF_T = 0.76;
+  function addBaseline(kind, y0){
+    const r = BASELINES[kind];
+    const geo = kind === "card"
+      ? roundedCoverGeo(r.w, REF_T, r.h, 3.2)                      // real card corner radius
+      : new THREE.BoxGeometry(r.w, REF_T, r.h);                    // Letter: square corners
+    const mat = kind === "card"
+      ? new THREE.MeshStandardMaterial({ color:0x3B424E, roughness:0.5, metalness:0.15 })
+      : new THREE.MeshStandardMaterial({ color:0xFFFFFF, roughness:0.92, metalness:0.0 });
+    const m = new THREE.Mesh(geo, mat);
+    m.castShadow = true; m.receiveShadow = true;
+    // roundedCoverGeo spans Y 0..T from its origin; BoxGeometry is centred on Y.
+    m.position.set(r.w/2, kind === "card" ? y0 : y0 + REF_T/2, -r.h/2);
+    notebookGroup.add(m);
+    labelAnchors.push({ name: kind === "card" ? "Credit Card" : "US Letter",
+                        dims: kind === "card" ? "85.6 × 54 mm" : "8.5 × 11 in",
+                        color:"#3B424E", p:new THREE.Vector3(r.w, y0 + REF_T, -r.h) });
   }
   function buildNotebooks(){
     if(notebookGroup){ disposeGroup(notebookGroup); scene.remove(notebookGroup); }
     notebookGroup = new THREE.Group();
     labelAnchors  = [];
-    // largest footprint at the bottom (mirrors the SVG's "largest behind" convention)
-    const visible = sizes.filter(s=>!hidden.has(s.id)).sort((a,b)=>(b.w*b.h)-(a.w*a.h));
+    // Books + active baseline refs stacked together, largest footprint at the bottom
+    // (mirrors the SVG's "largest behind" convention — Letter lands under everything,
+    // the credit card on top of the small books).
     const t = notebookThickness(state3d.pages, state3d.hard);
+    const items = [
+      ...sizes.filter(s=>!hidden.has(s.id)).map(s=>({ area:s.w*s.h, t, s })),
+      ...["letter","card"].filter(k=>baselines.has(k))
+        .map(k=>({ area:BASELINES[k].w*BASELINES[k].h, t:REF_T, ref:k }))
+    ].sort((a,b)=>b.area - a.area);
     let y0 = 0;
-    visible.forEach(s=>{ addBook(s, y0, t); y0 += t; });
+    items.forEach(it=>{
+      if(it.s) addBook(it.s, y0, t); else addBaseline(it.ref, y0);
+      y0 += it.t;
+    });
     scene.add(notebookGroup);
   }
 
@@ -1139,9 +1240,8 @@ view3d = (function(){
     labelAnchors.forEach(a=>{
       v.copy(a.p).project(camera);
       if(v.z <= -1 || v.z >= 1) return;
-      const name = `${a.s.name} · ${shortTag(a.s.tag)}`, dims = fmtDim(a.s.w, a.s.h, UNIT, a.s.approx);
-      maxChars = Math.max(maxChars, name.length + 3 + dims.length);
-      rows.push({ s:a.s, name, dims, x:(v.x*0.5+0.5)*w, y:(-v.y*0.5+0.5)*h });
+      maxChars = Math.max(maxChars, a.name.length + 3 + a.dims.length);
+      rows.push({ name:a.name, dims:a.dims, color:a.color, x:(v.x*0.5+0.5)*w, y:(-v.y*0.5+0.5)*h });
     });
     if(!rows.length){ overlay.innerHTML = ""; gutterFrac = 0.28; return; }
     const fontPx = label2DFontPx();
@@ -1158,10 +1258,10 @@ view3d = (function(){
     if(overflow > 0){ const shift = Math.min(overflow, rows[0].ly - 6); rows.forEach(r=>r.ly -= shift); }
     const fs = fontPx.toFixed(1);
     let out = "";
-    rows.forEach(({s, name, dims, x, y, ly})=>{
-      out += `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(colX-6).toFixed(1)}" y2="${ly.toFixed(1)}" stroke="${s.color}" stroke-width="1" stroke-opacity="0.6"/>`
-           + `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="${s.color}"/>`
-           + `<text x="${colX.toFixed(1)}" y="${(ly + fontPx*0.34).toFixed(1)}" font-size="${fs}"><tspan fill="${s.color}" font-weight="600">${esc(name)}</tspan><tspan fill="#5A6270">   ${esc(dims)}</tspan></text>`;
+    rows.forEach(({color, name, dims, x, y, ly})=>{
+      out += `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(colX-6).toFixed(1)}" y2="${ly.toFixed(1)}" stroke="${color}" stroke-width="1" stroke-opacity="0.6"/>`
+           + `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="${color}"/>`
+           + `<text x="${colX.toFixed(1)}" y="${(ly + fontPx*0.34).toFixed(1)}" font-size="${fs}"><tspan fill="${color}" font-weight="600">${esc(name)}</tspan><tspan fill="#5A6270">   ${esc(dims)}</tspan></text>`;
     });
     overlay.innerHTML = out;
   }
@@ -1228,10 +1328,23 @@ view3d = (function(){
     if(canvas && canvas.releasePointerCapture){ try{ canvas.releasePointerCapture(e.pointerId); }catch(_){} }
   };
   const onWheel = e=>{ e.preventDefault(); zoomTo(1 + Math.sign(e.deltaY)*0.08); };
+  // Keyboard alternative to drag-orbit / wheel-zoom (canvas is focusable).
+  const onKey = e=>{
+    const step = 0.08;
+    if(e.key === "ArrowLeft")       azimuth += step;
+    else if(e.key === "ArrowRight") azimuth -= step;
+    else if(e.key === "ArrowUp")    polar = Math.max(0.05, polar - step);
+    else if(e.key === "ArrowDown")  polar = Math.min(Math.PI/2 - 0.02, polar + step);
+    else if(e.key === "+" || e.key === "=") return e.preventDefault(), zoomTo(0.92);
+    else if(e.key === "-")          return e.preventDefault(), zoomTo(1.08);
+    else return;
+    e.preventDefault();
+    requestRender();
+  };
   const onResize = ()=>{
     if(!renderer) return;
     const w = stageContentWidth(), h = canvasHeight(w);
-    renderer.setSize(w, h); camera.aspect = w/h; camera.updateProjectionMatrix();
+    renderer.setSize(w, h); applyViewOffset();          // setViewOffset also refreshes aspect
     frameScene(false); syncOverlay();
     requestRender();
   };
@@ -1241,6 +1354,7 @@ view3d = (function(){
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
     canvas.addEventListener("wheel", onWheel, {passive:false});
+    canvas.addEventListener("keydown", onKey);
     window.addEventListener("resize", onResize);
   }
   function detachListeners(){
@@ -1248,6 +1362,7 @@ view3d = (function(){
       canvas.removeEventListener("pointerdown", onDown);
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("keydown", onKey);
     }
     window.removeEventListener("pointerup", onUp);
     window.removeEventListener("pointercancel", onUp);
@@ -1259,6 +1374,7 @@ view3d = (function(){
   ctrl.mount = async function(){
     const overlay = document.createElement("div");
     overlay.className = "view3d-loading";
+    overlay.setAttribute("role", "status");
     overlay.textContent = "Loading 3D…";
     stageEl.appendChild(overlay);
     try{
@@ -1272,15 +1388,18 @@ view3d = (function(){
       frameScene(true);
       attachListeners();
       svg.style.display = "none";
-      baselineWrap.hidden = true;
       nbControls.hidden = false;
       ctrl.active = true;
       view3dBtn.textContent = "2D";
       view3dBtn.classList.add("active");
+      view3dBtn.setAttribute("aria-pressed", "true");
+      view3dBtn.setAttribute("aria-label", "Switch to 2D diagram");
+      srStatus.textContent = "3D view active";
       requestRender();
     }catch(err){
       console.error("3D view failed to load", err);
       view3dBtn.textContent = "3D ✕";
+      srStatus.textContent = "3D view failed to load";
       setTimeout(()=>{ if(!ctrl.active) view3dBtn.textContent = "3D"; }, 2200);
     }finally{
       overlay.remove();
@@ -1310,10 +1429,12 @@ view3d = (function(){
     }
     renderer = null; scene = null; camera = null; canvas = null; THREE = null;
     nbControls.hidden = true;
-    baselineWrap.hidden = false;
     svg.style.display = "";
     view3dBtn.textContent = "3D";
     view3dBtn.classList.remove("active");
+    view3dBtn.setAttribute("aria-pressed", "false");
+    view3dBtn.setAttribute("aria-label", "Switch to 3D view");
+    srStatus.textContent = "2D diagram active";
     renderDiagram();                                    // repaint the SVG
   };
 
@@ -1326,6 +1447,7 @@ coverBtn.addEventListener("click", ()=>{
   state3d.hard = !state3d.hard;
   coverBtn.textContent = state3d.hard ? "Hardcover" : "Softcover";
   coverBtn.classList.toggle("active", state3d.hard);
+  coverBtn.setAttribute("aria-pressed", state3d.hard);
   view3d.rebuild();
 });
 pagesSel.addEventListener("change", ()=>{ state3d.pages = +pagesSel.value; view3d.rebuild(); });
