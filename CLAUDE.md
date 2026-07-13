@@ -141,11 +141,12 @@ hidden. `XX` is the ".com / other" fallback.
   override, and both may be on at once. They work in **both views**: 2D draws them as the
   filled card / outlined Letter frame; **3D renders them as non-book slabs** of ~credit-card
   thickness (card = dark with real rounded corners, Letter = white sheet with square corners),
-  stacked with the books by footprint area and given their own callout labels.
+  stacked with the books by the active Sort key and given their own callout labels.
 - **3D view (`view3d`)** — optional WebGL scene (Three.js core lazy-imported from CDN on
   first toggle; button hidden without WebGL). Books are 4 prisms (coloured/textured spine +
   overhanging covers, recessed white pages); thickness from the global Cover/Pages controls
-  (top-left of the stage, 3D only). Labels are a view-locked SVG overlay calibrated to the 2D
+  (top-left of the stage, 3D only). The pile stacks by the active **Sort** key (biggest at
+  the bottom), matching the cards + 2D callouts — `buildNotebooks()` reuses `sortDesc`. Labels are a view-locked SVG overlay calibrated to the 2D
   callout pixel size. Orbit = drag / arrow keys; zoom = wheel / pinch / +-. The pile sits
   left-of-centre via `camera.setViewOffset` (constant pixel shift — keeps the orbit pivot
   visually fixed); do **not** aim the camera at an offset look-point and never set

@@ -1264,15 +1264,15 @@ view3d = (function(){
     if(notebookGroup){ disposeGroup(notebookGroup); scene.remove(notebookGroup); }
     notebookGroup = new THREE.Group();
     labelAnchors  = [];
-    // Books + active baseline refs stacked together, largest footprint at the bottom
-    // (mirrors the SVG's "largest behind" convention — Letter lands under everything,
-    // the credit card on top of the small books).
+    // Books + active baseline refs stacked together, ordered by the active Sort key
+    // (biggest at the bottom) so the pile matches the cards + 2D callouts. Items carry
+    // w/h so the shared `sortDesc` comparator applies to books and baselines alike.
     const t = notebookThickness(state3d.pages, state3d.hard);
     const items = [
-      ...sizes.filter(s=>!hidden.has(s.id)).map(s=>({ area:s.w*s.h, t, s })),
+      ...sizes.filter(s=>!hidden.has(s.id)).map(s=>({ w:s.w, h:s.h, t, s })),
       ...["letter","card"].filter(k=>baselines.has(k))
-        .map(k=>({ area:BASELINES[k].w*BASELINES[k].h, t:REF_T, ref:k }))
-    ].sort((a,b)=>b.area - a.area);
+        .map(k=>({ w:BASELINES[k].w, h:BASELINES[k].h, t:REF_T, ref:k }))
+    ].sort(sortDesc);
     let y0 = 0;
     items.forEach(it=>{
       if(it.s) addBook(it.s, y0, t); else addBaseline(it.ref, y0);
