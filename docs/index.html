@@ -112,11 +112,11 @@
   }
   .region select:hover{border-color:var(--ink-soft);}
   .foot-right{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
-  .baseline{
+  .baseline,.sortby{
     display:flex;align-items:center;gap:6px;
     font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
   }
-  .baseline label,.baseline span{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--ink-faint);}
+  .baseline label,.baseline span,.sortby span{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--ink-faint);}
   .filters{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
   .fbtn{
     font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
@@ -247,6 +247,11 @@
       <button class="fbtn" data-group="ftr" type="button">Field/Traveller/Reporter/Weeks</button>
     </div>
     <div class="foot-right">
+      <div class="sortby" id="sortby" role="group" aria-labelledby="sortLbl">
+        <span id="sortLbl">Sort</span>
+        <button class="fbtn active" data-sort="h" type="button" aria-pressed="true">Height</button>
+        <button class="fbtn" data-sort="w" type="button" aria-pressed="false">Width</button>
+      </div>
       <div class="baseline" id="baseline" role="group" aria-labelledby="baselineLbl">
         <span id="baselineLbl">Baseline</span>
         <button class="fbtn" data-baseline="card" type="button" aria-pressed="false">Credit Card</button>
@@ -519,12 +524,16 @@ const sizes = [
     id:"fieldnotes", name:"Field Notes", tag:"memo · US format", color:"#9C5A2C",
     w:89, h:140, mm:"89 × 140 mm", in:"3.5 × 5.5 in", alt:"US memo book / “pocket” size",
     use:"Back-pocket carry — the classic 48-page memo book. Smaller than A6.",
-    none:"A brand-defined format, not an ISO/JIS standard: softcover, staple-bound, 48 pages. Standard 3-packs are graph or ruled; dot-grid shows up in some quarterly editions.",
+    none:"A brand-defined format, not an ISO/JIS standard: softcover, staple-bound, 48 pages. Standard 3-packs are graph or ruled; dot-grid shows up in some quarterly editions. Smythson's leather <b>Panama</b> (90×140) shares this 3.5×5.5 in footprint.",
     products:[
       {brand:"Field Notes", model:"Original Kraft 3-Pack — Graph",
        size:"Memo · 89×140", specs:[["paper","~70 gsm"],["pages","48 ea."],["cover","Softcover"],["ruling","Graph"]],
        note:"Body paper weight varies by edition; dot-grid is edition-dependent, so check the current release.",
-       search:"Field Notes memo book graph 3 pack"}
+       search:"Field Notes memo book graph 3 pack"},
+      {brand:"Smythson", model:"Panama Notebook (leather)",
+       size:"Panama · 90×140", specs:[["paper","Featherweight 50 gsm"],["leaves","128"],["cover","Leather"]],
+       note:"Smythson's flagship Panama is 90×140 — the same 3.5×5.5 in pocket footprint in leather.",
+       search:"Smythson Panama notebook"}
     ]
   },
   {
@@ -599,6 +608,39 @@ const sizes = [
     ]
   },
   {
+    id:"smythson_soho", name:"Smythson Soho", tag:"Smythson · bespoke", color:"#2E6E5E",
+    w:140, h:190, mm:"140 × 190 mm", in:"5.51 × 7.48 in", alt:"Smythson Soho — leather, Featherweight paper",
+    use:"A leather desk-and-carry notebook between B6 and A5 — a touch shorter than A5.",
+    none:"A bespoke Smythson trim (<b>W14 × H19 cm</b> on their listing), not a standard: sits between B6 ISO (125×176) and A5 (148×210), and near Baron Fig Confidant (137×196). Crossgrain-leather cover, sewn-bound, 192 leaves of Smythson's 50 gsm “Featherweight” paper.",
+    products:[
+      {brand:"Smythson", model:"Soho Notebook (Panama leather)",
+       size:"Soho · 140×190", specs:[["paper","Featherweight 50 gsm"],["leaves","192"],["cover","Leather"],["binding","Sewn"]],
+       search:"Smythson Soho notebook"}
+    ]
+  },
+  {
+    id:"smythson_chelsea", name:"Smythson Chelsea", tag:"Smythson · bespoke", color:"#8C3F5A",
+    w:112, h:167, mm:"112 × 167 mm", in:"4.41 × 6.57 in", alt:"Smythson Chelsea — leather, lined Featherweight",
+    use:"A slim leather pocket-plus size — bigger than A6, smaller than A5.",
+    none:"A bespoke Smythson trim (<b>W11.2 × H16.7 cm</b> on their listing), not a standard: between A6 (105×148) and A5 (148×210), and narrower and shorter than B6 ISO (125×176). Leather-bound, sewn, 144 lined leaves of Featherweight paper.",
+    products:[
+      {brand:"Smythson", model:"Chelsea Notebook (Panama leather) — Lined",
+       size:"Chelsea · 112×167", specs:[["paper","Featherweight 50 gsm"],["leaves","144"],["cover","Leather"],["ruling","Lined"]],
+       search:"Smythson Chelsea notebook"}
+    ]
+  },
+  {
+    id:"smythson_portobello", name:"Smythson Portobello", tag:"Smythson · bespoke", color:"#4A5578",
+    w:210, h:260, mm:"210 × 260 mm", in:"8.27 × 10.24 in", alt:"Smythson Portobello — large leather desk format",
+    use:"A large leather desk notebook: A4 width, but squatter than A4.",
+    none:"Smythson's large bespoke trim (<b>W21 × H26 cm</b>): the width of A4 (210) but ~37 mm shorter than A4's 297 — squarer than the A/B page ratio. Leather-bound, 192 leaves of Featherweight paper.",
+    products:[
+      {brand:"Smythson", model:"Portobello Notebook (Ludlow leather)",
+       size:"Portobello · 210×260", specs:[["paper","Featherweight 50 gsm"],["leaves","192"],["cover","Leather"],["binding","Sewn"]],
+       search:"Smythson Portobello notebook"}
+    ]
+  },
+  {
     id:"a7", name:"A7", tag:"ISO · A-series", color:"#C24D86",
     w:74, h:105, mm:"74 × 105 mm", in:"2.91 × 4.13 in", alt:"half of A6 — identical worldwide",
     use:"Tiny pocket capture — jotters, micro-lists, a size up from a business card.",
@@ -613,7 +655,11 @@ const sizes = [
        search:"Leuchtturm1917 Mini A7 hardcover dotted"},
       {brand:"Rhodia", model:"No. 11 Staplebound A7 — Dot",
        size:"A7 · 74×105", specs:[["paper","80 gsm"],["pages","48"],["cover","Softcover"],["ruling","Dot"]],
-       search:"Rhodia No 11 A7 dot pad"}
+       search:"Rhodia No 11 A7 dot pad"},
+      {brand:"Smythson", model:"Wafer Notebook (leather)",
+       size:"Wafer · 70×105", specs:[["paper","Featherweight 50 gsm"],["leaves","96"],["cover","Leather"]],
+       note:"Smythson's “Wafer” mini is 70×105 — A7 height, 4 mm narrower; a leather-bound take on this trim.",
+       search:"Smythson Wafer notebook"}
     ]
   },
   {
@@ -674,6 +720,11 @@ const BASELINES = {
   letter: {w:215.9, h:279.4, label:"US LETTER · 8.5 × 11 in",  solid:false}
 };
 
+// Sort key for the cards + diagram callout order: "h" (tallest first) or "w" (widest first),
+// toggled by the Sort buttons. Descending on the chosen dimension.
+let sortBy = "h";
+const sortDesc = (a,b) => (sortBy === "w" ? b.w - a.w : b.h - a.h);
+
 // The 3D-view controller (assigned at the end of the script). While it's active,
 // renderDiagram() dispatches to it instead of drawing the SVG — this is the single
 // integration hook, so every existing renderDiagram() caller updates the 3D scene too.
@@ -720,14 +771,18 @@ function renderDiagram(){
     <text x="3.5" y="${ry+8}" font-size="7" fill="#3B424E" font-weight="600" letter-spacing="0.3">${r.label}</text>`;
   }).join("");
 
-  // labels in a gutter that hugs the widest visible box; stacked top-to-bottom, no overlap
+  // labels in a gutter that hugs the widest visible box; stacked top-to-bottom, no overlap.
+  // Ordered by the active sort key (tallest- or widest-first). In height mode each label
+  // tracks its box's top edge; in width mode there's no vertical analogue, so labels are
+  // stacked evenly in width order (leaders still point to each box's top-right corner).
   const FS = 7, GAPY = FS*1.9;
   const gutterX = Wmax + 9;
   const labelX  = gutterX + 3;
   let lastY = -1e9, maxChars = 0;
-  const leaders = [...visible].sort((a,b)=>(B-a.h)-(B-b.h)).map(s=>{
+  const leaders = [...visible].sort(sortDesc).map((s,i)=>{
     const topY = B - s.h;
-    const ly = Math.max(topY + FS*0.4, lastY + GAPY);
+    const prefY = sortBy === "w" ? i*GAPY : topY;
+    const ly = Math.max(prefY + FS*0.4, lastY + GAPY);
     lastY = ly;
     const name = `${s.name} · ${shortTag(s.tag)}`;
     const dims = fmtDim(s.w, s.h, UNIT, s.approx);
@@ -793,9 +848,15 @@ function cardHTML(s){
 }
 
 const cardsEl = document.getElementById("cards");
-// Cards follow the same top-to-bottom order as the diagram's callouts (tallest first).
-const cardOrder = [...sizes].sort((a,b)=> b.h - a.h);
-cardsEl.innerHTML = cardOrder.map(cardHTML).join("");
+// Cards follow the same order as the diagram's callouts (per the active Sort key).
+cardsEl.innerHTML = [...sizes].sort(sortDesc).map(cardHTML).join("");
+// Re-order the existing card nodes (preserving their listeners) to match the sort key.
+function applyCardOrder(){
+  [...sizes].sort(sortDesc).forEach(s=>{
+    const card = document.getElementById("card-"+s.id);
+    if(card) cardsEl.appendChild(card);
+  });
+}
 
 const filtersEl = document.getElementById("filters");
 
@@ -806,8 +867,8 @@ const filtersEl = document.getElementById("filters");
                  active only when every item in that category is visible.
    Button state is always DERIVED from what's visible (see refreshFilters). */
 const GROUPS = {
-  a4:  ["a4"],
-  a5:  ["a5","moleskine_large","baronfig"],
+  a4:  ["a4","smythson_portobello"],
+  a5:  ["a5","moleskine_large","baronfig","smythson_soho","smythson_chelsea"],
   b5:  ["b5jis","b5iso","b5slim"],
   b6:  ["b6jis","b6iso","b6slim_midori","b6slim_stalogy"],
   b7:  ["b7jis","b7iso"],
@@ -905,6 +966,21 @@ baselineEl.addEventListener("click", e=>{
   const k = btn.dataset.baseline;
   if(baselines.has(k)) baselines.delete(k); else baselines.add(k);
   syncBaselineButtons();
+  renderDiagram();
+});
+
+/* ---------- SORT (height / width) ----------
+   Re-orders the cards + diagram callouts by the chosen dimension, descending. */
+const sortEl = document.getElementById("sortby");
+sortEl.addEventListener("click", e=>{
+  const btn = e.target.closest(".fbtn"); if(!btn || btn.dataset.sort === sortBy) return;
+  sortBy = btn.dataset.sort;
+  sortEl.querySelectorAll(".fbtn").forEach(b=>{
+    const on = b.dataset.sort === sortBy;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", on);
+  });
+  applyCardOrder();
   renderDiagram();
 });
 

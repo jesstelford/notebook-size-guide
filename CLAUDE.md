@@ -79,11 +79,13 @@ region-aware shopping links.
 - `products[]` — `{ brand, model, size, specs: [[k,v], …], note?, search }`.
   `search` is a **market-neutral** query string used to build both Amazon and Camel links.
 
-**Current 22 sizes** (cards render tallest-first to match the diagram callout order):
-A4, B5 JIS, B5 ISO, B5 Slim (approx), Traveler's Regular, A5, Moleskine Large,
-Reporter's (approx), Baron Fig Confidant (approx), Hobonichi Weeks, B6 JIS,
-B6 Slim Stalogy, B6 ISO, B6 Slim Midori, A6 Slim Traveler's (approx), A6, A6 Slim Muji,
-Field Notes, B7 JIS, Traveler's Passport, B7 ISO, A7.
+**Current 25 sizes** (cards render tallest-first by default; a Sort toggle can switch to
+widest-first):
+A4, Smythson Portobello, B5 JIS, B5 ISO, B5 Slim (approx), Traveler's Regular, A5,
+Smythson Soho, Moleskine Large, Reporter's (approx), Baron Fig Confidant (approx),
+Hobonichi Weeks, B6 JIS, Smythson Chelsea, B6 Slim Stalogy, B6 ISO, B6 Slim Midori,
+A6 Slim Traveler's (approx), A6, A6 Slim Muji, Field Notes, B7 JIS, Traveler's Passport,
+B7 ISO, A7.
 
 - **Moleskine Large** (130×210) — A5-height but 18 mm narrower; covers the whole Moleskine
   Large line (Classic, Cahier) and the fountain-pen "A5 Slim" 130×210 footprint.
@@ -96,6 +98,11 @@ Field Notes, B7 JIS, Traveler's Passport, B7 ISO, A7.
   and **Traveler's Company spiral-ring (≈94×152, quoted 6×3.7 in, `approx`)**. Near-A6 height
   but ~11–13 mm narrower; overlaps the Moleskine/Leuchtturm-Pocket cluster — the honest note
   says so.
+- **Smythson** (leather, Featherweight 50 gsm paper) — three bespoke trims verified from
+  smythson.com cm listings: **Soho 140×190**, **Chelsea 112×167**, **Portobello 210×260**.
+  Their **Panama (90×140)** duplicates the Field Notes 3.5×5.5 in footprint and **Wafer
+  (70×105)** is ~A7, so those two are listed as products under Field Notes / A7 rather than
+  as separate rectangles. ("Featherweight" is the paper, not a size.)
 
 `MARKETS` maps an ISO country code → `{ code, label, flag, amazon (host), camel (subdomain
 prefix | null) }`. `camel: null` ⇒ Camel unsupported in that marketplace ⇒ the Camel link is
@@ -124,8 +131,9 @@ hidden. `XX` is the ".com / other" fallback.
   - `All` only ever turns **ON**. The first group click from All mode focuses down to that
     group; subsequent clicks are additive (toggle whole categories on/off). Individual
     checkbox changes re-derive all button states.
-  - Groups: `a4`, `a5` (A5 + Moleskine Large + Baron Fig), `b5` (3 variants),
-    `b6` (4 variants), `b7` (JIS + ISO), `a6` (A6 + both A6 Slims), `a7`,
+  - Groups: `a4` (A4 + Smythson Portobello), `a5` (A5 + Moleskine Large + Baron Fig +
+    Smythson Soho/Chelsea), `b5` (3 variants), `b6` (4 variants), `b7` (JIS + ISO),
+    `a6` (A6 + both A6 Slims), `a7`,
     `ftr` (Field Notes + Traveler's Regular/Passport + Reporter's + Hobonichi Weeks).
 - **Baseline (`baselines` + `syncBaselineButtons`)** — a pair of independent toggle buttons
   (Credit Card / US Letter) in the stage foot, controlling which to-scale references are
