@@ -116,7 +116,12 @@
     display:flex;align-items:center;gap:6px;
     font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
   }
-  .baseline label,.baseline span,.sortby span{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--ink-faint);}
+  .baseline label,.baseline span,.sortby label{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--ink-faint);}
+  .sortby select{
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink);
+    background:var(--panel);border:1px solid var(--rule);border-radius:20px;padding:5px 10px;cursor:pointer;
+  }
+  .sortby select:hover{border-color:var(--ink-soft);}
   .filters{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
   .fbtn{
     font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
@@ -247,10 +252,13 @@
       <button class="fbtn" data-group="ftr" type="button">Field/Traveller/Reporter/Weeks</button>
     </div>
     <div class="foot-right">
-      <div class="sortby" id="sortby" role="group" aria-labelledby="sortLbl">
-        <span id="sortLbl">Sort</span>
-        <button class="fbtn active" data-sort="h" type="button" aria-pressed="true">Height</button>
-        <button class="fbtn" data-sort="w" type="button" aria-pressed="false">Width</button>
+      <div class="sortby" id="sortby">
+        <label for="sortSel">Sort</label>
+        <select id="sortSel">
+          <option value="area" selected>Area</option>
+          <option value="w">Width</option>
+          <option value="h">Height</option>
+        </select>
       </div>
       <div class="baseline" id="baseline" role="group" aria-labelledby="baselineLbl">
         <span id="baselineLbl">Baseline</span>
@@ -720,10 +728,13 @@ const BASELINES = {
   letter: {w:215.9, h:279.4, label:"US LETTER · 8.5 × 11 in",  solid:false}
 };
 
-// Sort key for the cards + diagram callout order: "h" (tallest first) or "w" (widest first),
-// toggled by the Sort buttons. Descending on the chosen dimension.
-let sortBy = "h";
-const sortDesc = (a,b) => (sortBy === "w" ? b.w - a.w : b.h - a.h);
+// Sort key for the cards + diagram callout order (Sort dropdown): "area" (default; ties
+// broken by width), "w" (widest first) or "h" (tallest first). Always descending.
+let sortBy = "area";
+const sortDesc = (a,b) =>
+  sortBy === "w" ? b.w - a.w :
+  sortBy === "h" ? b.h - a.h :
+  (b.w*b.h - a.w*a.h) || (b.w - a.w);
 
 // The 3D-view controller (assigned at the end of the script). While it's active,
 // renderDiagram() dispatches to it instead of drawing the SVG — this is the single
@@ -781,7 +792,7 @@ function renderDiagram(){
   let lastY = -1e9, maxChars = 0;
   const leaders = [...visible].sort(sortDesc).map((s,i)=>{
     const topY = B - s.h;
-    const prefY = sortBy === "w" ? i*GAPY : topY;
+    const prefY = sortBy === "h" ? topY : i*GAPY;   // height tracks box tops; area/width stack evenly
     const ly = Math.max(prefY + FS*0.4, lastY + GAPY);
     lastY = ly;
     const name = `${s.name} · ${shortTag(s.tag)}`;
@@ -969,17 +980,11 @@ baselineEl.addEventListener("click", e=>{
   renderDiagram();
 });
 
-/* ---------- SORT (height / width) ----------
-   Re-orders the cards + diagram callouts by the chosen dimension, descending. */
-const sortEl = document.getElementById("sortby");
-sortEl.addEventListener("click", e=>{
-  const btn = e.target.closest(".fbtn"); if(!btn || btn.dataset.sort === sortBy) return;
-  sortBy = btn.dataset.sort;
-  sortEl.querySelectorAll(".fbtn").forEach(b=>{
-    const on = b.dataset.sort === sortBy;
-    b.classList.toggle("active", on);
-    b.setAttribute("aria-pressed", on);
-  });
+/* ---------- SORT (area / width / height) ----------
+   Re-orders the cards + diagram callouts by the chosen key, descending. */
+const sortSel = document.getElementById("sortSel");
+sortSel.addEventListener("change", ()=>{
+  sortBy = sortSel.value;
   applyCardOrder();
   renderDiagram();
 });

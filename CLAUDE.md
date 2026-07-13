@@ -79,8 +79,8 @@ region-aware shopping links.
 - `products[]` — `{ brand, model, size, specs: [[k,v], …], note?, search }`.
   `search` is a **market-neutral** query string used to build both Amazon and Camel links.
 
-**Current 25 sizes** (cards render tallest-first by default; a Sort toggle can switch to
-widest-first):
+**Current 25 sizes** (a Sort dropdown orders the cards + diagram callouts by **Area**
+(default; ties broken by width), **Width** or **Height**, descending):
 A4, Smythson Portobello, B5 JIS, B5 ISO, B5 Slim (approx), Traveler's Regular, A5,
 Smythson Soho, Moleskine Large, Reporter's (approx), Baron Fig Confidant (approx),
 Hobonichi Weeks, B6 JIS, Smythson Chelsea, B6 Slim Stalogy, B6 ISO, B6 Slim Midori,
