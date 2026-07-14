@@ -112,11 +112,16 @@
   }
   .region select:hover{border-color:var(--ink-soft);}
   .foot-right{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
-  .baseline{
+  .baseline,.sortby{
     display:flex;align-items:center;gap:6px;
     font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
   }
-  .baseline label,.baseline span{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--ink-faint);}
+  .baseline label,.baseline span,.sortby label{letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--ink-faint);}
+  .sortby select{
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink);
+    background:var(--panel);border:1px solid var(--rule);border-radius:20px;padding:5px 10px;cursor:pointer;
+  }
+  .sortby select:hover{border-color:var(--ink-soft);}
   .filters{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
   .fbtn{
     font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
@@ -247,6 +252,14 @@
       <button class="fbtn" data-group="ftr" type="button">Field/Traveller/Reporter/Weeks</button>
     </div>
     <div class="foot-right">
+      <div class="sortby" id="sortby">
+        <label for="sortSel">Sort</label>
+        <select id="sortSel">
+          <option value="area" selected>Area</option>
+          <option value="w">Width</option>
+          <option value="h">Height</option>
+        </select>
+      </div>
       <div class="baseline" id="baseline" role="group" aria-labelledby="baselineLbl">
         <span id="baselineLbl">Baseline</span>
         <button class="fbtn" data-baseline="card" type="button" aria-pressed="false">Credit Card</button>
@@ -519,12 +532,16 @@ const sizes = [
     id:"fieldnotes", name:"Field Notes", tag:"memo · US format", color:"#9C5A2C",
     w:89, h:140, mm:"89 × 140 mm", in:"3.5 × 5.5 in", alt:"US memo book / “pocket” size",
     use:"Back-pocket carry — the classic 48-page memo book. Smaller than A6.",
-    none:"A brand-defined format, not an ISO/JIS standard: softcover, staple-bound, 48 pages. Standard 3-packs are graph or ruled; dot-grid shows up in some quarterly editions.",
+    none:"A brand-defined format, not an ISO/JIS standard: softcover, staple-bound, 48 pages. Standard 3-packs are graph or ruled; dot-grid shows up in some quarterly editions. Smythson's leather <b>Panama</b> (90×140) shares this 3.5×5.5 in footprint.",
     products:[
       {brand:"Field Notes", model:"Original Kraft 3-Pack — Graph",
        size:"Memo · 89×140", specs:[["paper","~70 gsm"],["pages","48 ea."],["cover","Softcover"],["ruling","Graph"]],
        note:"Body paper weight varies by edition; dot-grid is edition-dependent, so check the current release.",
-       search:"Field Notes memo book graph 3 pack"}
+       search:"Field Notes memo book graph 3 pack"},
+      {brand:"Smythson", model:"Panama Notebook (leather)",
+       size:"Panama · 90×140", specs:[["paper","Featherweight 50 gsm"],["leaves","128"],["cover","Leather"]],
+       note:"Smythson's flagship Panama is 90×140 — the same 3.5×5.5 in pocket footprint in leather.",
+       search:"Smythson Panama notebook"}
     ]
   },
   {
@@ -599,6 +616,39 @@ const sizes = [
     ]
   },
   {
+    id:"smythson_soho", name:"Soho", tag:"Smythson · bespoke", color:"#2E6E5E",
+    w:140, h:190, mm:"140 × 190 mm", in:"5.51 × 7.48 in", alt:"Smythson Soho — leather, Featherweight paper",
+    use:"A leather desk-and-carry notebook between B6 and A5 — a touch shorter than A5.",
+    none:"A bespoke Smythson trim (<b>W14 × H19 cm</b> on their listing), not a standard: sits between B6 ISO (125×176) and A5 (148×210), and near Baron Fig Confidant (137×196). Crossgrain-leather cover, sewn-bound, 192 leaves of Smythson's 50 gsm “Featherweight” paper.",
+    products:[
+      {brand:"Smythson", model:"Soho Notebook (Panama leather)",
+       size:"Soho · 140×190", specs:[["paper","Featherweight 50 gsm"],["leaves","192"],["cover","Leather"],["binding","Sewn"]],
+       search:"Smythson Soho notebook"}
+    ]
+  },
+  {
+    id:"smythson_chelsea", name:"Chelsea", tag:"Smythson · bespoke", color:"#8C3F5A",
+    w:112, h:167, mm:"112 × 167 mm", in:"4.41 × 6.57 in", alt:"Smythson Chelsea — leather, lined Featherweight",
+    use:"A slim leather pocket-plus size — bigger than A6, smaller than A5.",
+    none:"A bespoke Smythson trim (<b>W11.2 × H16.7 cm</b> on their listing), not a standard: between A6 (105×148) and A5 (148×210), and narrower and shorter than B6 ISO (125×176). Leather-bound, sewn, 144 lined leaves of Featherweight paper.",
+    products:[
+      {brand:"Smythson", model:"Chelsea Notebook (Panama leather) — Lined",
+       size:"Chelsea · 112×167", specs:[["paper","Featherweight 50 gsm"],["leaves","144"],["cover","Leather"],["ruling","Lined"]],
+       search:"Smythson Chelsea notebook"}
+    ]
+  },
+  {
+    id:"smythson_portobello", name:"Portobello", tag:"Smythson · bespoke", color:"#4A5578",
+    w:210, h:260, mm:"210 × 260 mm", in:"8.27 × 10.24 in", alt:"Smythson Portobello — large leather desk format",
+    use:"A large leather desk notebook: A4 width, but squatter than A4.",
+    none:"Smythson's large bespoke trim (<b>W21 × H26 cm</b>): the width of A4 (210) but ~37 mm shorter than A4's 297 — squarer than the A/B page ratio. Leather-bound, 192 leaves of Featherweight paper.",
+    products:[
+      {brand:"Smythson", model:"Portobello Notebook (Ludlow leather)",
+       size:"Portobello · 210×260", specs:[["paper","Featherweight 50 gsm"],["leaves","192"],["cover","Leather"],["binding","Sewn"]],
+       search:"Smythson Portobello notebook"}
+    ]
+  },
+  {
     id:"a7", name:"A7", tag:"ISO · A-series", color:"#C24D86",
     w:74, h:105, mm:"74 × 105 mm", in:"2.91 × 4.13 in", alt:"half of A6 — identical worldwide",
     use:"Tiny pocket capture — jotters, micro-lists, a size up from a business card.",
@@ -613,7 +663,11 @@ const sizes = [
        search:"Leuchtturm1917 Mini A7 hardcover dotted"},
       {brand:"Rhodia", model:"No. 11 Staplebound A7 — Dot",
        size:"A7 · 74×105", specs:[["paper","80 gsm"],["pages","48"],["cover","Softcover"],["ruling","Dot"]],
-       search:"Rhodia No 11 A7 dot pad"}
+       search:"Rhodia No 11 A7 dot pad"},
+      {brand:"Smythson", model:"Wafer Notebook (leather)",
+       size:"Wafer · 70×105", specs:[["paper","Featherweight 50 gsm"],["leaves","96"],["cover","Leather"]],
+       note:"Smythson's “Wafer” mini is 70×105 — A7 height, 4 mm narrower; a leather-bound take on this trim.",
+       search:"Smythson Wafer notebook"}
     ]
   },
   {
@@ -674,6 +728,14 @@ const BASELINES = {
   letter: {w:215.9, h:279.4, label:"US LETTER · 8.5 × 11 in",  solid:false}
 };
 
+// Sort key for the cards + diagram callout order (Sort dropdown): "area" (default; ties
+// broken by width), "w" (widest first) or "h" (tallest first). Always descending.
+let sortBy = "area";
+const sortDesc = (a,b) =>
+  sortBy === "w" ? b.w - a.w :
+  sortBy === "h" ? b.h - a.h :
+  (b.w*b.h - a.w*a.h) || (b.w - a.w);
+
 // The 3D-view controller (assigned at the end of the script). While it's active,
 // renderDiagram() dispatches to it instead of drawing the SVG — this is the single
 // integration hook, so every existing renderDiagram() caller updates the 3D scene too.
@@ -720,14 +782,18 @@ function renderDiagram(){
     <text x="3.5" y="${ry+8}" font-size="7" fill="#3B424E" font-weight="600" letter-spacing="0.3">${r.label}</text>`;
   }).join("");
 
-  // labels in a gutter that hugs the widest visible box; stacked top-to-bottom, no overlap
+  // labels in a gutter that hugs the widest visible box; stacked top-to-bottom, no overlap.
+  // Ordered by the active sort key (tallest- or widest-first). In height mode each label
+  // tracks its box's top edge; in width mode there's no vertical analogue, so labels are
+  // stacked evenly in width order (leaders still point to each box's top-right corner).
   const FS = 7, GAPY = FS*1.9;
   const gutterX = Wmax + 9;
   const labelX  = gutterX + 3;
   let lastY = -1e9, maxChars = 0;
-  const leaders = [...visible].sort((a,b)=>(B-a.h)-(B-b.h)).map(s=>{
+  const leaders = [...visible].sort(sortDesc).map((s,i)=>{
     const topY = B - s.h;
-    const ly = Math.max(topY + FS*0.4, lastY + GAPY);
+    const prefY = sortBy === "h" ? topY : i*GAPY;   // height tracks box tops; area/width stack evenly
+    const ly = Math.max(prefY + FS*0.4, lastY + GAPY);
     lastY = ly;
     const name = `${s.name} · ${shortTag(s.tag)}`;
     const dims = fmtDim(s.w, s.h, UNIT, s.approx);
@@ -793,9 +859,15 @@ function cardHTML(s){
 }
 
 const cardsEl = document.getElementById("cards");
-// Cards follow the same top-to-bottom order as the diagram's callouts (tallest first).
-const cardOrder = [...sizes].sort((a,b)=> b.h - a.h);
-cardsEl.innerHTML = cardOrder.map(cardHTML).join("");
+// Cards follow the same order as the diagram's callouts (per the active Sort key).
+cardsEl.innerHTML = [...sizes].sort(sortDesc).map(cardHTML).join("");
+// Re-order the existing card nodes (preserving their listeners) to match the sort key.
+function applyCardOrder(){
+  [...sizes].sort(sortDesc).forEach(s=>{
+    const card = document.getElementById("card-"+s.id);
+    if(card) cardsEl.appendChild(card);
+  });
+}
 
 const filtersEl = document.getElementById("filters");
 
@@ -806,8 +878,8 @@ const filtersEl = document.getElementById("filters");
                  active only when every item in that category is visible.
    Button state is always DERIVED from what's visible (see refreshFilters). */
 const GROUPS = {
-  a4:  ["a4"],
-  a5:  ["a5","moleskine_large","baronfig"],
+  a4:  ["a4","smythson_portobello"],
+  a5:  ["a5","moleskine_large","baronfig","smythson_soho","smythson_chelsea"],
   b5:  ["b5jis","b5iso","b5slim"],
   b6:  ["b6jis","b6iso","b6slim_midori","b6slim_stalogy"],
   b7:  ["b7jis","b7iso"],
@@ -905,6 +977,15 @@ baselineEl.addEventListener("click", e=>{
   const k = btn.dataset.baseline;
   if(baselines.has(k)) baselines.delete(k); else baselines.add(k);
   syncBaselineButtons();
+  renderDiagram();
+});
+
+/* ---------- SORT (area / width / height) ----------
+   Re-orders the cards + diagram callouts by the chosen key, descending. */
+const sortSel = document.getElementById("sortSel");
+sortSel.addEventListener("change", ()=>{
+  sortBy = sortSel.value;
+  applyCardOrder();
   renderDiagram();
 });
 
@@ -1029,7 +1110,8 @@ view3d = (function(){
   function applyViewOffset(){
     const w = canvas.clientWidth, h = canvas.clientHeight;
     const G = Math.round(w * gutterFrac);
-    camera.setViewOffset(w + G, h, G, 0, w, h);
+    const yShift = Math.round(Math.max(0, h - baseViewH(w)) * 0.42);   // pull the pile up on a grown canvas
+    camera.setViewOffset(w + G, h, G, yShift, w, h);
   }
   function positionCamera(){
     if(!camera || !target) return;
@@ -1050,8 +1132,28 @@ view3d = (function(){
     const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
     return Math.max(280, stageEl.clientWidth - padX);
   }
-  // Canvas height: 60% of width, but never taller than 75% of the viewport height.
-  const canvasHeight = w => Math.min(Math.max(320, Math.round(w*0.6)), Math.round(window.innerHeight*0.75));
+  // Base canvas height: 60% of width, capped at 75% of the viewport height.
+  const baseViewH = w => Math.min(Math.max(320, Math.round(w*0.6)), Math.round(window.innerHeight*0.75));
+  // Space reserved at the top for the Cover/Pages controls + 3D/2D button so callouts clear them.
+  function topReserve(){
+    const bh = view3dBtn.offsetHeight || 28;
+    const ch = nbControls.hidden ? 0 : (nbControls.offsetHeight || 0);
+    return 14 + Math.max(bh, ch) + 12;
+  }
+  // Grow the canvas past the base height when the callout column needs more room, so every
+  // visible size is listed and none hides behind the top controls or spills off the surface.
+  const canvasHeight = w => {
+    const n = sizes.filter(s=>!hidden.has(s.id)).length + baselines.size;
+    const need = topReserve() + n * (label2DFontPx() * 1.5) + 14;
+    return Math.max(baseViewH(w), Math.ceil(need));
+  };
+  function resizeCanvas(){
+    if(!renderer) return;
+    const w = stageContentWidth(), h = canvasHeight(w);
+    renderer.setSize(w, h);
+    applyViewOffset();
+    syncOverlay();
+  }
   function buildScene(){
     const w = stageContentWidth(), h = canvasHeight(w);
     renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
@@ -1183,15 +1285,15 @@ view3d = (function(){
     if(notebookGroup){ disposeGroup(notebookGroup); scene.remove(notebookGroup); }
     notebookGroup = new THREE.Group();
     labelAnchors  = [];
-    // Books + active baseline refs stacked together, largest footprint at the bottom
-    // (mirrors the SVG's "largest behind" convention — Letter lands under everything,
-    // the credit card on top of the small books).
+    // Books + active baseline refs stacked together, ordered by the active Sort key
+    // (biggest at the bottom) so the pile matches the cards + 2D callouts. Items carry
+    // w/h so the shared `sortDesc` comparator applies to books and baselines alike.
     const t = notebookThickness(state3d.pages, state3d.hard);
     const items = [
-      ...sizes.filter(s=>!hidden.has(s.id)).map(s=>({ area:s.w*s.h, t, s })),
+      ...sizes.filter(s=>!hidden.has(s.id)).map(s=>({ w:s.w, h:s.h, t, s })),
       ...["letter","card"].filter(k=>baselines.has(k))
-        .map(k=>({ area:BASELINES[k].w*BASELINES[k].h, t:REF_T, ref:k }))
-    ].sort((a,b)=>b.area - a.area);
+        .map(k=>({ w:BASELINES[k].w, h:BASELINES[k].h, t:REF_T, ref:k }))
+    ].sort(sortDesc);
     let y0 = 0;
     items.forEach(it=>{
       if(it.s) addBook(it.s, y0, t); else addBaseline(it.ref, y0);
@@ -1250,12 +1352,14 @@ view3d = (function(){
     gutterFrac = gutterW / w;
     const colX = w - gutterW + 2;
     const LH = fontPx * 1.5;
-    // push-down anti-overlap pass (as in the 2D view), then shift up if it runs off the bottom
+    // push-down anti-overlap pass (as in the 2D view), starting below the top controls;
+    // shift up if it runs off the bottom (never above the reserved top area)
+    const tr = topReserve();
     rows.sort((a,b)=>a.y - b.y);
-    let lastY = -1e9;
+    let lastY = tr - LH;
     rows.forEach(r=>{ r.ly = Math.max(r.y, lastY + LH); lastY = r.ly; });
-    const overflow = lastY - (h - 6);
-    if(overflow > 0){ const shift = Math.min(overflow, rows[0].ly - 6); rows.forEach(r=>r.ly -= shift); }
+    const overflow = lastY - (h - 8);
+    if(overflow > 0){ const shift = Math.min(overflow, rows[0].ly - tr); rows.forEach(r=>r.ly -= shift); }
     const fs = fontPx.toFixed(1);
     let out = "";
     rows.forEach(({color, name, dims, x, y, ly})=>{
@@ -1275,8 +1379,10 @@ view3d = (function(){
     const size = new THREE.Vector3(); box.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
     const fov = camera.fov*Math.PI/180;
-    // shrink so the pile fits the left (1 - gutterFrac) of the frame, leaving room for labels
-    dist = (maxDim/2)/Math.tan(fov/2)*1.4 / Math.max(0.5, 1 - gutterFrac) + maxDim*0.3;
+    // Fit into the left (1 - gutterFrac) of the frame; when the canvas grew taller for the
+    // callout column, scale distance so the pile keeps its base-height size (no ballooning).
+    const grow = Math.max(1, canvas.clientHeight / baseViewH(canvas.clientWidth));
+    dist = ((maxDim/2)/Math.tan(fov/2)*1.4 / Math.max(0.5, 1 - gutterFrac) + maxDim*0.3) * grow;
     requestRender();
   }
 
@@ -1343,9 +1449,8 @@ view3d = (function(){
   };
   const onResize = ()=>{
     if(!renderer) return;
-    const w = stageContentWidth(), h = canvasHeight(w);
-    renderer.setSize(w, h); applyViewOffset();          // setViewOffset also refreshes aspect
-    frameScene(false); syncOverlay();
+    resizeCanvas();
+    frameScene(false);
     requestRender();
   };
   function attachListeners(){
@@ -1385,6 +1490,7 @@ view3d = (function(){
       const raw = rawLabelPx();
       labelCal = raw > 0 ? (7 * svgRect.width / vbw) / raw : 1;
       buildNotebooks();
+      resizeCanvas();                                   // grow to fit the full callout column
       frameScene(true);
       attachListeners();
       svg.style.display = "none";
@@ -1408,6 +1514,7 @@ view3d = (function(){
   ctrl.rebuild = function(){
     if(!ctrl.active || !renderer) return;
     buildNotebooks();
+    resizeCanvas();                                     // visible-size count may have changed
     frameScene(false);                                  // keep the user's orbit angles
   };
   ctrl.unmount = function(){
