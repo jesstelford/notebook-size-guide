@@ -124,6 +124,7 @@
     background:var(--panel);border:1px solid var(--rule);border-radius:20px;padding:5px 10px;cursor:pointer;
   }
   .sortby select:hover{border-color:var(--ink-soft);}
+  .share-btn{display:inline-flex;align-items:center;gap:6px;}
   .filters{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
   .fbtn{
     font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-soft);
@@ -261,6 +262,9 @@
           <option value="w">Width</option>
           <option value="h">Height</option>
         </select>
+        <button class="fbtn share-btn" id="shareBtn" type="button" title="Copy a link to this view">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true" focusable="false"><path d="M8.6 4.1a1.4 1.4 0 1 0 0-2.8 1.4 1.4 0 0 0 0 2.8Zm-5.2 3.3a1.4 1.4 0 1 0 0-2.8 1.4 1.4 0 0 0 0 2.8Zm5.2 3.3a1.4 1.4 0 1 0 0-2.8 1.4 1.4 0 0 0 0 2.8ZM4.6 5.3l2.8-1.6M4.6 6.7l2.8 1.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg><span class="share-txt">Share</span>
+        </button>
       </div>
       <div class="baseline" id="baseline" role="group" aria-labelledby="baselineLbl">
         <span id="baselineLbl">Baseline</span>
@@ -728,13 +732,94 @@ const sizes = [
   }
 ];
 
+/* ---------- URL STATE ----------
+   The URL is the source of truth for the view options. It's parsed once, here, and the
+   state below initialises directly from it — never patched in after a first render, so a
+   shared link paints correctly on the very first frame. Every param is optional and
+   anything invalid falls back to its default: a bare URL loads exactly as it always has.
+
+     s=area|w|h    sort key                 h=id,id        hidden size ids
+     sh=id,id      shown size ids — the inverse of h; whichever list is shorter is written,
+                   so filtering down to one group stays a short URL (h wins if both appear)
+     b=c|l|c,l|0   baseline refs ("0"=none) r=US           marketplace + unit region
+     v=3           3D view active           c=s            softcover (default hardcover)
+     p=50|280      page count               cam=az,pol,d   3D orbit angles (rad) + distance (mm)
+     ar=1.78       canvas aspect ratio when the link was made (see restoreCam) */
+const VIEW = (function(){
+  const st = { sort:"area", hide:[], base:null, is3D:false, hard:true, pages:120,
+               region:null, cam:null, ar:null };
+  let q;
+  try{ q = new URLSearchParams(location.search); }catch(e){ return st; }
+  const f = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+  const clamp = (n,lo,hi) => Math.min(hi, Math.max(lo, n));
+  try{
+    const s = q.get("s");   if(s === "w" || s === "h" || s === "area") st.sort = s;
+    const known = new Set(sizes.map(x=>x.id));
+    const h = q.get("h"), sh = q.get("sh");
+    if(h) st.hide = h.split(",").filter(id=>known.has(id));
+    else if(sh !== null){                                // inverse form: everything else is hidden
+      const shown = new Set(sh.split(",").filter(id=>known.has(id)));
+      st.hide = [...known].filter(id=>!shown.has(id));
+    }
+    const b = q.get("b");
+    if(b !== null) st.base = b.split(",").map(k => k==="c" ? "card" : k==="l" ? "letter" : null).filter(Boolean);
+    if(q.get("v") === "3") st.is3D = true;
+    if(q.get("c") === "s") st.hard = false;
+    const p = f(q.get("p"));   if(p === 50 || p === 120 || p === 280) st.pages = p;
+    const r = q.get("r");      if(r && MARKETS[r]) st.region = r;
+    const cam = (q.get("cam") || "").split(",").map(f);
+    if(cam.length === 3 && cam.every(n => n !== null))
+      st.cam = { az:cam[0], pol:clamp(cam[1], 0.05, Math.PI/2 - 0.02), dist:clamp(cam[2], 80, 6000) };
+    const ar = f(q.get("ar"));  if(ar !== null && ar > 0) st.ar = clamp(ar, 0.1, 10);
+  }catch(e){ /* malformed → keep whatever parsed, rest stays default */ }
+  return st;
+})();
+
+// Current state → canonical shareable URL. Camera/aspect only while 3D is mounted (they
+// mean nothing in the 2D view).
+function buildURL(){
+  const q = new URLSearchParams();
+  if(sortBy !== "area") q.set("s", sortBy);
+  if(hidden.size){                                       // write the shorter of hidden / shown
+    const hide = [...hidden].join(",");
+    const show = sizes.filter(s=>!hidden.has(s.id)).map(s=>s.id).join(",");
+    if(show.length < hide.length) q.set("sh", show); else q.set("h", hide);
+  }
+  q.set("b", baselines.size ? [...baselines].map(k => k === "card" ? "c" : "l").join(",") : "0");
+  if(MARKET && MARKET.code) q.set("r", MARKET.code);
+  if(!state3d.hard) q.set("c", "s");
+  if(state3d.pages !== 120) q.set("p", state3d.pages);
+  if(view3d && view3d.active){
+    q.set("v", "3");
+    const c = view3d.camState();
+    if(c){ q.set("cam", `${c.az},${c.pol},${c.dist}`); q.set("ar", c.ar); }
+  }
+  const qs = q.toString();
+  return location.href.replace(/[?#].*$/, "") + (qs ? "?" + qs : "") + location.hash;
+}
+
+// Always replaceState, never pushState, so continuous changes don't flood the back button.
+// Discrete toggles write immediately; orbit/zoom debounce through writeURLSoon().
+let urlTimer = 0;
+function writeURL(){
+  clearTimeout(urlTimer); urlTimer = 0;
+  try{ history.replaceState(null, "", buildURL()); }catch(e){ /* file:// etc — URL just won't track */ }
+}
+const writeURLSoon = () => { clearTimeout(urlTimer); urlTimer = setTimeout(writeURL, 250); };
+
 /* ---------- DIAGRAM ---------- */
 const svg = document.getElementById("diagram");
-const hidden = new Set();
+// A URL-requested 3D view hides the 2D diagram up-front, so the default view never flashes
+// before the (lazily imported) 3D scene takes over. Restored below if 3D can't load.
+if(VIEW.is3D) svg.style.display = "none";
+const hidden = new Set(VIEW.hide);
 // Active to-scale baseline references drawn in the diagram (toggled by the Baseline
 // buttons). "card" = credit card (filled block); "letter" = US Letter sheet (outlined
 // frame). Both can be on at once. The region default is set in applyMarket().
-const baselines = new Set();
+const baselines = new Set(VIEW.base || []);
+// A URL-pinned baseline set survives applyMarket()'s region default (incl. async detection);
+// an explicit region change unpins it so that region's default applies again.
+let baselinePinned = VIEW.base !== null;
 const BASELINES = {
   card:   {w:85.6,  h:54,    label:"CREDIT CARD · 85.6 × 54", solid:true},
   letter: {w:215.9, h:279.4, label:"US LETTER · 8.5 × 11 in",  solid:false}
@@ -742,7 +827,7 @@ const BASELINES = {
 
 // Sort key for the cards + diagram callout order (Sort dropdown): "area" (default; ties
 // broken by width), "w" (widest first) or "h" (tallest first). Always descending.
-let sortBy = "area";
+let sortBy = VIEW.sort;
 const sortDesc = (a,b) =>
   sortBy === "w" ? b.w - a.w :
   sortBy === "h" ? b.h - a.h :
@@ -851,10 +936,11 @@ function cardHTML(s){
   const noneBlock = s.none ? `<div class="none">${s.none}</div>` : "";
   const cnt = s.products ? s.products.length : 0;
   const countLabel = cnt ? cnt + " option" + (cnt>1?"s":"") : "see note";
-  return `<div class="card" id="card-${s.id}" style="--c:${s.color}">
+  const off = hidden.has(s.id);                 // URL-restored visibility, applied on first paint
+  return `<div class="card${off ? " off" : ""}" id="card-${s.id}" style="--c:${s.color}">
     <div class="card-head">
       <label class="toggle" title="Show / hide in diagram">
-        <input type="checkbox" checked data-id="${s.id}" aria-label="Show ${esc(s.name)} (${esc(shortTag(s.tag))}) in diagram">
+        <input type="checkbox"${off ? "" : " checked"} data-id="${s.id}" aria-label="Show ${esc(s.name)} (${esc(shortTag(s.tag))}) in diagram">
         <span class="box">${check}</span>
       </label>
       <h3 class="name">${esc(s.name)}</h3>
@@ -927,6 +1013,7 @@ cardsEl.querySelectorAll("input[type=checkbox]").forEach(cb=>{
     else { hidden.add(id); card.classList.add("off"); }
     refreshFilters();
     renderDiagram();
+    writeURL();
   });
 });
 
@@ -948,13 +1035,14 @@ filtersEl.addEventListener("click", e=>{
   syncChecks();
   refreshFilters();
   renderDiagram();
+  writeURL();
 });
 
 refreshFilters();
 
 /* ---------- REGION WIRING ---------- */
 const regionSel  = document.getElementById("regionSel");
-let userChangedRegion = false;
+let userChangedRegion = VIEW.region !== null;             // a URL-pinned region suppresses detection
 
 regionSel.innerHTML = Object.values(MARKETS)
   .map(m=>`<option value="${m.code}">${m.flag} ${m.label}</option>`).join("");
@@ -990,15 +1078,18 @@ baselineEl.addEventListener("click", e=>{
   if(baselines.has(k)) baselines.delete(k); else baselines.add(k);
   syncBaselineButtons();
   renderDiagram();
+  writeURL();
 });
 
 /* ---------- SORT (area / width / height) ----------
    Re-orders the cards + diagram callouts by the chosen key, descending. */
 const sortSel = document.getElementById("sortSel");
+sortSel.value = sortBy;                                  // reflect a URL-restored sort key
 sortSel.addEventListener("change", ()=>{
   sortBy = sortSel.value;
   applyCardOrder();
   renderDiagram();
+  writeURL();
 });
 
 function updateMarketLinks(){
@@ -1014,18 +1105,26 @@ function applyMarket(code, auto){
   regionSel.value = MARKET.code;
   syncRegionDisplay(true);
   regionSel.title = auto ? "Region · auto-detected" : "Region";
-  // Region drives the baseline default: US → US Letter, everywhere else → Credit Card.
-  baselines.clear();
-  baselines.add(MARKET.code === "US" ? "letter" : "card");
+  // Region drives the baseline default: US → US Letter, everywhere else → Credit Card
+  // (skipped while the URL has pinned an explicit baseline set).
+  if(!baselinePinned){
+    baselines.clear();
+    baselines.add(MARKET.code === "US" ? "letter" : "card");
+  }
   syncBaselineButtons();
   updateMarketLinks();
   updateUnits();
   renderDiagram();
 }
-regionSel.addEventListener("change", ()=>{ userChangedRegion = true; applyMarket(regionSel.value, false); });
+regionSel.addEventListener("change", ()=>{
+  userChangedRegion = true;
+  baselinePinned = false;                                // an explicit region re-applies its default
+  applyMarket(regionSel.value, false);
+  writeURL();
+});
 
-// 1) synchronous best guess from the browser locale (no network, no prompt)
-applyMarket(countryFromLocale() || "XX", false);
+// 1) a URL-pinned region wins; otherwise a synchronous best guess from the browser locale
+applyMarket(VIEW.region || countryFromLocale() || "XX", false);
 // 2) non-intrusive IP lookup refines it, unless the user has already chosen
 detectCountry().then(cc=>{
   if(userChangedRegion) return;
@@ -1046,7 +1145,12 @@ const pagesSel   = document.getElementById("pagesSel");
 const srStatus   = document.getElementById("srStatus");
 
 // Global (all-notebook) cover + page controls, shown only in 3D mode.
-const state3d = { hard:true, pages:120 };
+const state3d = { hard:VIEW.hard, pages:VIEW.pages };
+// Reflect URL-restored cover/pages on the controls before they're ever shown.
+coverBtn.textContent = state3d.hard ? "Hardcover" : "Softcover";
+coverBtn.classList.toggle("active", state3d.hard);
+coverBtn.setAttribute("aria-pressed", state3d.hard);
+pagesSel.value = state3d.pages;
 
 function webglOK(){
   try{
@@ -1105,6 +1209,7 @@ view3d = (function(){
     if(!renderer) return;
     needsRender = true;
     if(!rafId) rafId = requestAnimationFrame(draw);
+    if(ctrl.active) writeURLSoon();     // debounced: orbit/zoom/resize don't thrash history
   }
   function draw(){
     rafId = 0;
@@ -1382,6 +1487,28 @@ view3d = (function(){
     overlay.innerHTML = out;
   }
 
+  /* --- shareable camera state ---
+     `ar` is the canvas aspect at share time. Restoring reproduces the sender's FRAMING, not
+     their literal distance. Vertical FOV is fixed, so the visible vertical world extent is
+     2*d*tan(fov/2) (aspect-independent) and the horizontal extent is that × ar — meaning the
+     *constrained* (smaller) axis is vertical when ar >= 1 and horizontal when ar < 1. Holding
+     that constrained extent equal across aspects gives the scale factor below. Without it, a
+     view framed on a narrow phone arrives on a wide monitor with the subject shrunk into the
+     middle of the frame. Clamped to the same bounds as zoomTo(). */
+  ctrl.camState = () => (ctrl.active && canvas && canvas.clientHeight) ? {
+    az:   +azimuth.toFixed(3),
+    pol:  +polar.toFixed(3),
+    dist: Math.round(dist),
+    ar:   +(canvas.clientWidth / canvas.clientHeight).toFixed(2)
+  } : null;
+  function restoreCam(cam, arShared){
+    azimuth = cam.az;
+    polar   = cam.pol;
+    const arNow = canvas.clientWidth / canvas.clientHeight;
+    const k = (arShared > 0 && arNow > 0) ? Math.min(1, arShared) / Math.min(1, arNow) : 1;
+    dist = Math.max(80, Math.min(6000, cam.dist * k));
+  }
+
   /* --- camera framing recomputed from the visible bounds (preserving orbit angles) --- */
   function frameScene(reset){
     if(reset){ azimuth = Math.PI*0.18; polar = Math.PI*0.36; }
@@ -1499,11 +1626,14 @@ view3d = (function(){
       buildScene();
       // Calibrate label size to the live 2D diagram (accounts for its 75vh height cap).
       const svgRect = svg.getBoundingClientRect(), vbw = (svg.viewBox.baseVal.width || 1);
-      const raw = rawLabelPx();
-      labelCal = raw > 0 ? (7 * svgRect.width / vbw) / raw : 1;
+      const raw = rawLabelPx(), svgPx = 7 * svgRect.width / vbw;
+      labelCal = (raw > 0 && svgPx > 0) ? svgPx / raw : 1;   // svg hidden (URL-booted 3D) → uncalibrated
       buildNotebooks();
       resizeCanvas();                                   // grow to fit the full callout column
       frameScene(true);
+      // A shared camera overrides the default framing — consumed once, so later 2D→3D
+      // toggles frame fresh rather than snapping back to the link's angle.
+      if(VIEW.cam){ restoreCam(VIEW.cam, VIEW.ar); VIEW.cam = null; }
       attachListeners();
       svg.style.display = "none";
       nbControls.hidden = false;
@@ -1516,6 +1646,7 @@ view3d = (function(){
       requestRender();
     }catch(err){
       console.error("3D view failed to load", err);
+      svg.style.display = "";                           // incl. a URL-booted 3D that never loaded
       view3dBtn.textContent = "3D ✕";
       srStatus.textContent = "3D view failed to load";
       setTimeout(()=>{ if(!ctrl.active) view3dBtn.textContent = "3D"; }, 2200);
@@ -1561,17 +1692,61 @@ view3d = (function(){
 })();
 
 /* --- 3D control wiring (button gated on WebGL availability) --- */
-view3dBtn.addEventListener("click", ()=>{ if(view3d.active) view3d.unmount(); else view3d.mount(); });
+view3dBtn.addEventListener("click", async ()=>{
+  if(view3d.active) view3d.unmount(); else await view3d.mount();
+  writeURL();
+});
 coverBtn.addEventListener("click", ()=>{
   state3d.hard = !state3d.hard;
   coverBtn.textContent = state3d.hard ? "Hardcover" : "Softcover";
   coverBtn.classList.toggle("active", state3d.hard);
   coverBtn.setAttribute("aria-pressed", state3d.hard);
   view3d.rebuild();
+  writeURL();
 });
-pagesSel.addEventListener("change", ()=>{ state3d.pages = +pagesSel.value; view3d.rebuild(); });
+pagesSel.addEventListener("change", ()=>{
+  state3d.pages = +pagesSel.value;
+  view3d.rebuild();
+  writeURL();
+});
 
-if(webglOK()) view3dBtn.hidden = false;
+/* --- Share: hand out the canonical URL for whatever is on screen right now --- */
+const shareBtn = document.getElementById("shareBtn");
+const shareTxt = shareBtn.querySelector(".share-txt");
+let shareTimer = 0;
+function shareFeedback(msg){
+  shareTxt.textContent = msg;
+  srStatus.textContent = msg;
+  clearTimeout(shareTimer);
+  shareTimer = setTimeout(()=>{ shareTxt.textContent = "Share"; }, 1800);
+}
+shareBtn.addEventListener("click", async ()=>{
+  const url = buildURL();
+  writeURL();                                           // address bar matches what we hand out
+  try{
+    if(navigator.share){ await navigator.share({ title:document.title, url }); return; }
+  }catch(e){ if(e && e.name === "AbortError") return; } // user dismissed the share sheet
+  try{
+    await navigator.clipboard.writeText(url);
+    shareFeedback("Copied!");
+    return;
+  }catch(e){/* insecure context / denied → fall through */}
+  try{                                                  // last resort (file://, older browsers)
+    const ta = document.createElement("textarea");
+    ta.value = url; ta.setAttribute("readonly", "");
+    ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.appendChild(ta); ta.select();
+    document.execCommand("copy"); ta.remove();
+    shareFeedback("Copied!");
+  }catch(e){ shareFeedback("Copy failed"); }
+});
+
+if(webglOK()){
+  view3dBtn.hidden = false;
+  if(VIEW.is3D) view3d.mount();                         // URL asked for 3D; the svg is already hidden
+}else if(VIEW.is3D){
+  svg.style.display = "";                               // no WebGL — fall back to the 2D diagram
+}
 </script>
 </body>
 </html>

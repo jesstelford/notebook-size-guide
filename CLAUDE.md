@@ -42,6 +42,11 @@ filters → region-wiring → 3D view. Read the code for specifics; the non-obvi
   `sortBy` key — never track selection/order state separately.
 - **`renderDiagram()` is the single sync hook.** Every size/unit/sort toggle calls it, and it
   **dispatches to `view3d.rebuild()` while 3D is active** — that guard keeps 2D and 3D in step.
+- **The URL is the source of truth for view options** (`VIEW` / `buildURL` / `writeURL`).
+  `VIEW` is parsed once up-front and `hidden` / `sortBy` / `baselines` / `state3d` initialise
+  **directly from it**, so a shared link is correct on the first paint — never restore in a
+  post-render pass. Writes always use `replaceState` (camera debounced via `writeURLSoon`).
+  A bare URL must keep loading exactly as it does today.
 - **Sort** (`sortBy`/`sortDesc`; dropdown Area/Width/Height, Area ties break by width) orders
   cards, 2D callouts and the 3D pile together.
 - **Diagram** `viewBox` is recomputed each render from the visible bounding box (hiding sizes
