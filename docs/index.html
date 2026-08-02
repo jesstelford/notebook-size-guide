@@ -8,7 +8,7 @@
 <link rel="canonical" href="https://jesstelford.github.io/notebook-size-guide/" />
 <meta name="theme-color" content="#F8F7F3" />
 <meta property="og:title" content="Notebook Sizes — Drawn to Scale" />
-<meta property="og:description" content="Compare 22 notebook and paper sizes to scale — ISO, JIS and brand formats — in 2D or as a 3D pile of notebooks, with credit-card and US Letter references." />
+<meta property="og:description" content="Compare 25 notebook and paper sizes to scale — ISO, JIS and brand formats — in 2D or as a 3D pile of notebooks, with credit-card and US Letter references." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://jesstelford.github.io/notebook-size-guide/" />
 <meta property="og:site_name" content="Notebook Size Guide" />
@@ -18,7 +18,7 @@
 <meta property="og:image:alt" content="3D rendering of notebooks stacked to scale on a US Letter sheet, with size callouts." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Notebook Sizes — Drawn to Scale" />
-<meta name="twitter:description" content="Compare 22 notebook and paper sizes to scale — ISO, JIS and brand formats — in 2D or as a 3D pile of notebooks." />
+<meta name="twitter:description" content="Compare 25 notebook and paper sizes to scale — ISO, JIS and brand formats — in 2D or as a 3D pile of notebooks." />
 <meta name="twitter:image" content="https://jesstelford.github.io/notebook-size-guide/social.png" />
 <meta name="twitter:image:alt" content="3D rendering of notebooks stacked to scale on a US Letter sheet, with size callouts." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -27,6 +27,8 @@
 <style>
   :root{
     --paper:#F8F7F3; --panel:#FFFFFF; --ink:#1B2430;
+    /* --ink-soft / --ink-faint darkened for WCAG AA small-text contrast — keep any grey text
+       token, and every size `color` below, ≥ 4.5:1 on white (#FFF) / paper (#F8F7F3). */
     --ink-soft:#5A6270; --ink-faint:#6A7078; --rule:#E7E4DC; --margin:#C65B58;
   }
   .sr-only{
@@ -366,7 +368,17 @@ async function detectCountry(){
   return countryFromLocale();
 }
 
-/* ---------- DATA ---------- */
+/* ---------- DATA ----------
+   `sizes` is the single source of truth. Most fields are self-evident from an entry; the
+   non-obvious ones:
+   - `w`,`h`  real width/height in **mm** — drive the drawing and every unit conversion.
+   - `tag`    pill text; the part before the first `·` is the short label used in callouts.
+   - `mm`     human dimension string (may contain `≈`); `in` is legacy and no longer displayed
+              (`fmtDim` computes units live from w/h).
+   - `approx` prepends `≈`; `none` (HTML) is the honest note shown when a size has no clean match.
+   - `search` a **market-neutral** query string — builds BOTH the Amazon and Camel links.
+   Data rule: never fabricate dimensions/specs — verified only. A trim that duplicates an
+   existing footprint is listed as a `product` under that size, not added as a new rectangle. */
 
 const sizes = [
   {
