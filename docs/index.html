@@ -366,7 +366,17 @@ async function detectCountry(){
   return countryFromLocale();
 }
 
-/* ---------- DATA ---------- */
+/* ---------- DATA ----------
+   `sizes` is the single source of truth. Most fields are self-evident from an entry; the
+   non-obvious ones:
+   - `w`,`h`  real width/height in **mm** — drive the drawing and every unit conversion.
+   - `tag`    pill text; the part before the first `·` is the short label used in callouts.
+   - `mm`     human dimension string (may contain `≈`); `in` is legacy and no longer displayed
+              (`fmtDim` computes units live from w/h).
+   - `approx` prepends `≈`; `none` (HTML) is the honest note shown when a size has no clean match.
+   - `search` a **market-neutral** query string — builds BOTH the Amazon and Camel links.
+   Data rule: never fabricate dimensions/specs — verified only. A trim that duplicates an
+   existing footprint is listed as a `product` under that size, not added as a new rectangle. */
 
 const sizes = [
   {
