@@ -1494,23 +1494,34 @@ view3d = (function(){
      *constrained* (smaller) axis is vertical when ar >= 1 and horizontal when ar < 1. Holding
      that constrained extent equal across aspects gives the scale factor below. Without it, a
      view framed on a narrow phone arrives on a wide monitor with the subject shrunk into the
-     middle of the frame. Clamped to the same bounds as zoomTo(). */
+     middle of the frame. Clamped to the same bounds as zoomTo().
+     `heldAr` is the aspect the current distance was framed for while the camera is held — set
+     by a restored link and kept as the user orbits/zooms — so a resize or phone rotation
+     rescales by the same rule instead of re-framing fresh. null = auto-framed (bare URL, or
+     after frameScene re-fits), where resize re-runs frameScene as before. */
   ctrl.camState = () => (ctrl.active && canvas && canvas.clientHeight) ? {
     az:   +azimuth.toFixed(3),
     pol:  +polar.toFixed(3),
     dist: Math.round(dist),
     ar:   +(canvas.clientWidth / canvas.clientHeight).toFixed(2)
   } : null;
+  let heldAr = null;
+  // Distance that keeps the constrained axis's visible extent when the aspect goes arFrom → now.
+  function distForAspect(d, arFrom){
+    const arNow = canvas.clientWidth / canvas.clientHeight;
+    const k = (arFrom > 0 && arNow > 0) ? Math.min(1, arFrom) / Math.min(1, arNow) : 1;
+    heldAr = arNow > 0 ? arNow : null;
+    return Math.max(80, Math.min(6000, d * k));
+  }
   function restoreCam(cam, arShared){
     azimuth = cam.az;
     polar   = cam.pol;
-    const arNow = canvas.clientWidth / canvas.clientHeight;
-    const k = (arShared > 0 && arNow > 0) ? Math.min(1, arShared) / Math.min(1, arNow) : 1;
-    dist = Math.max(80, Math.min(6000, cam.dist * k));
+    dist = distForAspect(cam.dist, arShared);
   }
 
   /* --- camera framing recomputed from the visible bounds (preserving orbit angles) --- */
   function frameScene(reset){
+    heldAr = null;                                       // auto-framed again
     if(reset){ azimuth = Math.PI*0.18; polar = Math.PI*0.36; }
     const box = new THREE.Box3().setFromObject(notebookGroup);
     if(box.isEmpty()){ target.set(0,0,0); dist = 400; requestRender(); return; }
@@ -1589,7 +1600,8 @@ view3d = (function(){
   const onResize = ()=>{
     if(!renderer) return;
     resizeCanvas();
-    frameScene(false);
+    if(heldAr) dist = distForAspect(dist, heldAr);       // held framing (shared link) survives
+    else frameScene(false);
     requestRender();
   };
   function attachListeners(){
