@@ -844,8 +844,9 @@ const shortTag = t => t.split("·")[0].trim();
 // Rebuilds the whole diagram from the currently-visible sizes. The viewBox is
 // recomputed each time from the visible bounding box, so the boxes + labels grow
 // to fill the container when larger sizes are hidden, and labels hug the widest box.
-function renderDiagram(){
-  if(view3d && view3d.active){ view3d.rebuild(); return; }   // 3D mounted → update the scene instead
+// `keepCam` is passed through to view3d.rebuild() (see there).
+function renderDiagram(keepCam){
+  if(view3d && view3d.active){ view3d.rebuild(keepCam); return; }   // 3D mounted → update the scene instead
   const visible = sizes.filter(s=>!hidden.has(s.id));
   if(visible.length === 0){
     svg.setAttribute("viewBox","0 0 200 60");
@@ -1114,7 +1115,7 @@ function applyMarket(code, auto){
   syncBaselineButtons();
   updateMarketLinks();
   updateUnits();
-  renderDiagram();
+  renderDiagram(auto);                                   // late auto-detection keeps a held 3D camera
 }
 regionSel.addEventListener("change", ()=>{
   userChangedRegion = true;
@@ -1520,12 +1521,18 @@ view3d = (function(){
   }
 
   /* --- camera framing recomputed from the visible bounds (preserving orbit angles) --- */
+  // Aim at the centre of the visible pile; returns its bounds (null when empty).
+  function centreTarget(){
+    const box = new THREE.Box3().setFromObject(notebookGroup);
+    if(box.isEmpty()){ target.set(0,0,0); return null; }
+    box.getCenter(target);
+    return box;
+  }
   function frameScene(reset){
     heldAr = null;                                       // auto-framed again
     if(reset){ azimuth = Math.PI*0.18; polar = Math.PI*0.36; }
-    const box = new THREE.Box3().setFromObject(notebookGroup);
-    if(box.isEmpty()){ target.set(0,0,0); dist = 400; requestRender(); return; }
-    box.getCenter(target);
+    const box = centreTarget();
+    if(!box){ dist = 400; requestRender(); return; }
     const size = new THREE.Vector3(); box.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
     const fov = camera.fov*Math.PI/180;
@@ -1666,11 +1673,21 @@ view3d = (function(){
       overlay.remove();
     }
   };
-  ctrl.rebuild = function(){
+  /* `keepCam` (only a late region auto-detection passes it): if the camera is held — a
+     restored shared link, possibly orbited since — keep its angles and distance instead of
+     re-framing, so a link without `r=` isn't reset when ipwho.is answers after mount. The
+     pile is re-centred (its region baseline may have changed), matching what the restore
+     would have produced had detection won the race. Every other rebuild re-frames as before. */
+  ctrl.rebuild = function(keepCam){
     if(!ctrl.active || !renderer) return;
     buildNotebooks();
     resizeCanvas();                                     // visible-size count may have changed
-    frameScene(false);                                  // keep the user's orbit angles
+    if(keepCam && heldAr){
+      centreTarget();
+      dist = distForAspect(dist, heldAr);               // canvas aspect may have changed
+      requestRender();
+    }
+    else frameScene(false);                             // keep the user's orbit angles
   };
   ctrl.unmount = function(){
     ctrl.active = false;
